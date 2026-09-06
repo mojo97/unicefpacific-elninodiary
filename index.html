@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="UNICEF Pacific El Niño activity analysis, timeline and map.">
+  <title>Pacific El Niño Activity Diary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to dashboard</a>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <div class="unicef-logo-shell">
+        <img class="unicef-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Logo_of_UNICEF.svg" alt="UNICEF">
+      </div>
+      <div><p class="eyebrow">UNICEF Pacific · Internal decision support</p><h1>El Niño Activity Diary</h1></div>
+    </div>
+    <div class="header-actions">
+      <div class="sync-state" id="sync-state"><i></i><span>Demonstration data</span></div>
+      <input class="visually-hidden" id="excel-file-input" type="file" accept=".xlsx,.xls,.xlsm" aria-label="Choose an Excel activity diary">
+      <button class="button button-secondary" id="excel-upload-button" type="button"><span aria-hidden="true">↑</span> Load Excel</button>
+      <button class="button button-secondary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
+      <button class="button button-primary hidden" id="connect-button" type="button">Connect Microsoft 365</button>
+    </div>
+  </header>
+
+  <div class="demo-banner" id="demo-banner"><strong>Demonstration:</strong> the Activity Diary sheet is empty, so this preview uses the workbook’s five illustrative entries. Do not report these figures as actual results.</div>
+
+  <nav class="view-tabs" aria-label="Dashboard views">
+    <button class="tab active" data-view="overview" type="button">Overview</button>
+    <button class="tab" data-view="timeline" type="button">Activity timeline</button>
+    <button class="tab" data-view="map" type="button">Map</button>
+    <button class="tab" data-view="register" type="button">Activity register</button>
+  </nav>
+
+  <section class="filter-bar" aria-label="Dashboard filters">
+    <label class="search-control"><span>Search</span><input id="search-filter" type="search" placeholder="Activity, result, partner or location"></label>
+    <label><span>Unit</span><select id="unit-filter"><option value="">All units</option></select></label>
+    <label><span>Country</span><select id="country-filter"><option value="">All countries</option></select></label>
+    <label><span>Phase</span><select id="phase-filter"><option value="">All phases</option></select></label>
+    <label><span>Status</span><select id="status-filter"><option value="">All statuses</option></select></label>
+    <button id="clear-filters" class="clear-button" type="button">Clear filters</button>
+  </section>
+
+  <main id="main-content">
+    <section class="view active" id="view-overview">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="overview-grid">
+        <article class="panel span-2">
+          <div class="panel-heading"><div><p class="section-kicker">WHEN</p><h2>Activity momentum</h2></div><p id="date-range-label" class="panel-note"></p></div>
+          <div id="monthly-chart" class="monthly-chart" role="img" aria-label="Activities by reporting month"></div>
+        </article>
+        <article class="panel phase-panel">
+          <div class="panel-heading"><div><p class="section-kicker">JOURNEY</p><h2>El Niño phase</h2></div></div>
+          <div id="phase-donut" class="donut-wrap"></div><div id="phase-legend" class="compact-legend"></div>
+        </article>
+        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">WHO</p><h2>Activity by unit</h2></div></div><div id="unit-bars" class="rank-bars"></div></article>
+        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">DELIVERY</p><h2>Reach by unit</h2></div></div><div id="reach-bars" class="rank-bars"></div></article>
+        <article class="panel followup-panel"><div class="panel-heading"><div><p class="section-kicker">MANAGEMENT</p><h2>Follow-up signals</h2></div></div><div id="followup-list" class="followup-list"></div></article>
+        <article class="panel span-3 latest-panel">
+          <div class="panel-heading"><div><p class="section-kicker">LATEST DIARY ENTRIES</p><h2>What units did most recently</h2></div><button class="text-button" type="button" data-go-view="timeline">View full timeline →</button></div>
+          <div id="latest-activities" class="latest-grid"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-timeline">
+      <div class="view-intro"><div><p class="section-kicker">CHRONOLOGICAL DIARY</p><h2>What happened, when and by whom</h2></div><p>Activities are positioned by actual activity date, not submission date.</p></div>
+      <div class="phase-ribbon" id="phase-ribbon"></div><div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="view" id="view-map">
+      <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
+    </section>
+
+    <section class="view" id="view-register">
+      <div class="view-intro"><div><p class="section-kicker">AUDITABLE REGISTER</p><h2>Every diary entry</h2></div><p>Select a row to see all 21 workbook fields.</p></div>
+      <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Unit</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
+    </section>
+  </main>
+
+  <footer><p><strong>Source:</strong> ElNinoActivityDiary Excel table · <span id="footer-source">demonstration extract</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
+
+  <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://alcdn.msauth.net/browser/2.38.4/js/msal-browser.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
