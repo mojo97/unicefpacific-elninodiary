@@ -1,5 +1,5 @@
 const FIELD_ORDER = [
-  "Entry ID", "Activity Date*", "Reporting Month", "UNICEF Setor*", "Country*",
+  "Entry ID", "Activity Date*", "Reporting Month", "UNICEF Sector*", "Country*",
   "Location / Admin Area", "El Niño Phase*", "Activity Type*", "Activity Title*",
   "What Was Done?*", "Result / Output", "People Reached (Total)", "Children Reached",
   "Partners", "Implementation Status*", "Funding Used (USD)", "Challenges", "Next Step",
