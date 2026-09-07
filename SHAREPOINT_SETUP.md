@@ -7,6 +7,7 @@ This dashboard is a browser-based, read-only Microsoft Graph client. It uses del
 - Store the workbook in the intended SharePoint document library.
 - Confirm that the operational data are in the Excel table named `ElNinoActivityDiary` on the **Activity Diary** sheet.
 - Keep the existing 21 table headers unchanged.
+- Keep the source header `UNICEF Unit*` unchanged. The dashboard presents it to users as **UNICEF Sector**.
 - Confirm that intended viewers have at least read access to the file.
 - Do not use the **Example Entries** sheet as operational data.
 
@@ -32,25 +33,27 @@ An Entra administrator should:
 
 The application requests read permissions only. For tighter least-privilege control, an Entra/SharePoint administrator may replace this design with a tenant-managed solution using site-scoped permissions or SharePoint Framework.
 
-## 3. Find the workbook identifiers
+## 3. Confirm the preconfigured workbook location
 
-Use Microsoft Graph Explorer or an approved administrative script while signed in to the UNICEF tenant.
-
-You need:
-
-- `siteId` — the SharePoint site containing the document library
-- `driveId` — the document library
-- `itemId` — the workbook file
-
-Typical Microsoft Graph requests are:
+The dashboard has been configured from the supplied SharePoint workbook link:
 
 ```text
-GET https://graph.microsoft.com/v1.0/sites/{hostname}:/{server-relative-site-path}
-GET https://graph.microsoft.com/v1.0/sites/{siteId}/drives
-GET https://graph.microsoft.com/v1.0/sites/{siteId}/drives/{driveId}/root:/{path-to-workbook}
+Hostname: unicef.sharepoint.com
+Site path: /teams/FJI-Program
+Document library: Emergency
+Workbook path: /2026 El Niño/UNICEF_El_Nino_Activity_Diary_Reporting_Template_v1.xlsx
 ```
 
-Copy the returned `id` values. The exact site path, document-library drive, and workbook path depend on the UNICEF SharePoint structure, so the public sharing URL by itself should not be guessed into these fields.
+The dashboard resolves the SharePoint Site ID, Drive ID and Item ID automatically after the user signs in. Confirm that `Emergency` is the document library name and that the workbook has not been moved or renamed.
+
+The automatic read sequence is:
+
+```text
+GET https://graph.microsoft.com/v1.0/sites/unicef.sharepoint.com:/teams/FJI-Program
+GET https://graph.microsoft.com/v1.0/sites/{siteId}/drives
+GET https://graph.microsoft.com/v1.0/drives/{driveId}/root:/2026 El Niño/UNICEF_El_Nino_Activity_Diary_Reporting_Template_v1.xlsx
+GET https://graph.microsoft.com/v1.0/drives/{driveId}/items/{itemId}/content
+```
 
 ## 4. Configure the website
 
@@ -63,9 +66,13 @@ window.DIARY_CONFIG = {
   sharePoint: {
     tenantId: "PASTE_TENANT_ID",
     clientId: "PASTE_APPLICATION_CLIENT_ID",
-    siteId: "PASTE_SITE_ID",
-    driveId: "PASTE_DRIVE_ID",
-    itemId: "PASTE_EXCEL_ITEM_ID",
+    hostname: "unicef.sharepoint.com",
+    sitePath: "/teams/FJI-Program",
+    libraryName: "Emergency",
+    filePath: "/2026 El Niño/UNICEF_El_Nino_Activity_Diary_Reporting_Template_v1.xlsx",
+    siteId: "",
+    driveId: "",
+    itemId: "",
     tableName: "ElNinoActivityDiary"
   }
 };
@@ -86,13 +93,13 @@ Commit the change to GitHub. These identifiers identify resources but are not pa
 
 ## 6. How live refresh works
 
-The site calls this read endpoint after Microsoft sign-in:
+After Microsoft sign-in, the site resolves the configured location and requests the current workbook file:
 
 ```text
-GET /sites/{siteId}/drives/{driveId}/items/{itemId}/workbook/tables/ElNinoActivityDiary/rows
+GET /drives/{driveId}/items/{itemId}/content
 ```
 
-The page converts each table row to the matching column header, discards unused blank template rows, and recalculates every view. It refreshes every five minutes while open. The source of truth remains the SharePoint workbook.
+The page reads the **Activity Diary** sheet locally in the signed-in user's browser, matches the 21 column headers, discards unused blank template rows, and recalculates every view. It refreshes every five minutes while open. The source of truth remains the SharePoint workbook.
 
 ## Troubleshooting
 
@@ -100,7 +107,9 @@ The page converts each table row to the matching column header, discards unused 
 |---|---|
 | Sign-in says redirect URI mismatch | The Entra SPA redirect URI must exactly match the GitHub Pages URL, including path and trailing slash |
 | Access denied | Viewer lacks workbook access, tenant consent is missing, or Graph delegated permissions are not approved |
-| Table not found | Excel table must be named `ElNinoActivityDiary`, not merely a worksheet range |
+| Document library not found | Confirm the library is named `Emergency`; update `libraryName` if its actual name differs |
+| Workbook not found | Confirm the `2026 El Niño` folder and workbook filename exactly match `config.js` |
+| Activity Diary header not found | Keep the **Activity Diary** sheet and the original 21 column headings |
 | Dashboard is empty | Confirm the **Activity Diary** table contains dated rows and the workbook is saved |
 | Embed is blocked | Allow the `github.io` domain in SharePoint HTML Field Security or use an approved internal host |
 | Sign-in fails inside embed | Allow pop-ups/third-party sign-in, test direct URL, or use a SharePoint Framework deployment |

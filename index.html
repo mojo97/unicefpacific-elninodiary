@@ -18,18 +18,18 @@
       <div class="unicef-logo-shell">
         <img class="unicef-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Logo_of_UNICEF.svg" alt="UNICEF">
       </div>
-      <div><p class="eyebrow">UNICEF Pacific </p><h1>El Niño Activity Diary</h1></div>
+      <div><p class="eyebrow">UNICEF Pacific · Internal decision support</p><h1>El Niño Activity Diary</h1></div>
     </div>
     <div class="header-actions">
       <div class="sync-state" id="sync-state"><i></i><span>Demonstration data</span></div>
       <input class="visually-hidden" id="excel-file-input" type="file" accept=".xlsx,.xls,.xlsm" aria-label="Choose an Excel activity diary">
       <button class="button button-secondary" id="excel-upload-button" type="button"><span aria-hidden="true">↑</span> Load Excel</button>
       <button class="button button-secondary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
-      <button class="button button-primary hidden" id="connect-button" type="button">Connect Microsoft 365</button>
+      <button class="button button-primary hidden" id="connect-button" type="button"><span aria-hidden="true">↔</span> Use SharePoint</button>
     </div>
   </header>
 
-  <div class="demo-banner" id="demo-banner"><strong>Demonstration:</strong> These are dummy data entries. Do not report these figures as actual results.</div>
+  <div class="demo-banner" id="demo-banner"><strong>Demonstration:</strong> the Activity Diary sheet is empty, so this preview uses the workbook’s five illustrative entries. Do not report these figures as actual results.</div>
 
   <nav class="view-tabs" aria-label="Dashboard views">
     <button class="tab active" data-view="overview" type="button">Overview</button>
@@ -40,7 +40,7 @@
 
   <section class="filter-bar" aria-label="Dashboard filters">
     <label class="search-control"><span>Search</span><input id="search-filter" type="search" placeholder="Activity, result, partner or location"></label>
-    <label><span>Sectors</span><select id="Sector-filter"><option value="">All sectors</option></select></label>
+    <label><span>UNICEF Sector</span><select id="unit-filter"><option value="">All sectors</option></select></label>
     <label><span>Country</span><select id="country-filter"><option value="">All countries</option></select></label>
     <label><span>Phase</span><select id="phase-filter"><option value="">All phases</option></select></label>
     <label><span>Status</span><select id="status-filter"><option value="">All statuses</option></select></label>
@@ -59,11 +59,11 @@
           <div class="panel-heading"><div><p class="section-kicker">JOURNEY</p><h2>El Niño phase</h2></div></div>
           <div id="phase-donut" class="donut-wrap"></div><div id="phase-legend" class="compact-legend"></div>
         </article>
-        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">WHO</p><h2>Activity by Sectors</h2></div></div><div id="Sector-bars" class="rank-bars"></div></article>
-        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">DELIVERY</p><h2>Reach by Sectors</h2></div></div><div id="reach-bars" class="rank-bars"></div></article>
+        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">WHO</p><h2>Activity by UNICEF sector</h2></div></div><div id="unit-bars" class="rank-bars"></div></article>
+        <article class="panel"><div class="panel-heading"><div><p class="section-kicker">DELIVERY</p><h2>Reach by UNICEF sector</h2></div></div><div id="reach-bars" class="rank-bars"></div></article>
         <article class="panel followup-panel"><div class="panel-heading"><div><p class="section-kicker">MANAGEMENT</p><h2>Follow-up signals</h2></div></div><div id="followup-list" class="followup-list"></div></article>
         <article class="panel span-3 latest-panel">
-          <div class="panel-heading"><div><p class="section-kicker">LATEST DIARY ENTRIES</p><h2>What Sectors did most recently</h2></div><button class="text-button" type="button" data-go-view="timeline">View full timeline →</button></div>
+          <div class="panel-heading"><div><p class="section-kicker">LATEST DIARY ENTRIES</p><h2>What UNICEF sectors did most recently</h2></div><button class="text-button" type="button" data-go-view="timeline">View full timeline →</button></div>
           <div id="latest-activities" class="latest-grid"></div>
         </article>
       </div>
@@ -76,12 +76,12 @@
 
     <section class="view" id="view-map">
       <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact commSectory or facility mapping.</p></div></aside></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
     <section class="view" id="view-register">
       <div class="view-intro"><div><p class="section-kicker">AUDITABLE REGISTER</p><h2>Every diary entry</h2></div><p>Select a row to see all 21 workbook fields.</p></div>
-      <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
+      <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>UNICEF Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
     </section>
   </main>
 

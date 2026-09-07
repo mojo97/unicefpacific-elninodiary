@@ -1,10 +1,13 @@
 const FIELD_ORDER = [
-  "Entry ID", "Activity Date*", "Reporting Month", "UNICEF Sector*", "Country*",
+  "Entry ID", "Activity Date*", "Reporting Month", "UNICEF Unit*", "Country*",
   "Location / Admin Area", "El Niño Phase*", "Activity Type*", "Activity Title*",
   "What Was Done?*", "Result / Output", "People Reached (Total)", "Children Reached",
   "Partners", "Implementation Status*", "Funding Used (USD)", "Challenges", "Next Step",
   "Evidence Link", "Focal Point*", "Submission Date*"
 ];
+const FIELD_ALIASES = {
+  "UNICEF Unit*": ["UNICEF Sector*", "UNICEF Sectors*", "UNICEF Unit / Sector*"]
+};
 
 const COUNTRY_COORDS = {
   "Pacific region / Multi-country": [-8, 168], "Australia": [-25.27, 133.78],
@@ -57,9 +60,8 @@ function normalizeActivity(raw) {
   return activity;
 }
 
-async function loadExcelData(file) {
+function parseExcelData(bytes, sourceDetails) {
   if (!window.XLSX) throw new Error("The Excel reader did not load. Check your internet connection and try again.");
-  const bytes = await file.arrayBuffer();
   const workbook = XLSX.read(bytes, { type: "array", cellDates: true });
   const preferredSheet = workbook.Sheets["Activity Diary"] ? "Activity Diary" : null;
   const candidates = preferredSheet ? [preferredSheet] : workbook.SheetNames;
@@ -76,16 +78,21 @@ async function loadExcelData(file) {
 
   if (!selected) throw new Error("No Activity Diary header row was found in this Excel file.");
   const headers = selected.rows[selected.headerIndex].map(value => String(value ?? "").trim());
-  const missing = FIELD_ORDER.filter(field => !headers.includes(field));
+  const sourceHeader = field => [field,...(FIELD_ALIASES[field] || [])].find(candidate => headers.includes(candidate));
+  const missing = FIELD_ORDER.filter(field => !sourceHeader(field));
   if (missing.length) throw new Error(`The Excel file is missing required column${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}`);
 
-  const activities = selected.rows.slice(selected.headerIndex + 1).map(row => Object.fromEntries(headers.map((header,index) => [header,row[index]])))
+  const activities = selected.rows.slice(selected.headerIndex + 1).map(row => Object.fromEntries(FIELD_ORDER.map(field => [field,row[headers.indexOf(sourceHeader(field))]])))
     .filter(row => row["Activity Date*"] !== "" && row["Activity Date*"] !== null && row["Activity Title*"] !== "")
     .map(normalizeActivity);
   if (!activities.length) throw new Error(`The ${selected.sheetName} sheet contains no completed activity rows.`);
 
-  metadata = { isDemo: false, source: "Uploaded Excel", fileName: file.name, sheet: selected.sheetName, generatedAt: new Date().toISOString() };
+  metadata = { isDemo: false, ...sourceDetails, sheet: selected.sheetName, generatedAt: new Date().toISOString() };
   return activities;
+}
+
+async function loadExcelData(file) {
+  return parseExcelData(await file.arrayBuffer(), { source: "Uploaded Excel", fileName: file.name });
 }
 
 async function loadLocalData() {
@@ -99,7 +106,9 @@ async function loadLocalData() {
 async function initialiseMicrosoft() {
   if (!window.msal) throw new Error("Microsoft sign-in library did not load.");
   const sp = config.sharePoint || {};
-  const missing = ["tenantId", "clientId", "siteId", "driveId", "itemId"].some(k => !sp[k] || String(sp[k]).startsWith("YOUR_"));
+  const hasIds = ["siteId", "driveId", "itemId"].every(k => sp[k] && !String(sp[k]).startsWith("YOUR_"));
+  const hasPath = ["hostname", "sitePath", "libraryName", "filePath"].every(k => sp[k]);
+  const missing = ["tenantId", "clientId"].some(k => !sp[k] || String(sp[k]).startsWith("YOUR_")) || (!hasIds && !hasPath);
   if (missing) throw new Error("SharePoint live mode is not configured yet. Complete config.js first.");
   if (!msalClient) {
     msalClient = new msal.PublicClientApplication({
@@ -110,6 +119,29 @@ async function initialiseMicrosoft() {
   }
 }
 
+const graphPath = value => "/" + String(value || "").split("/").filter(Boolean).map(encodeURIComponent).join("/");
+async function graphFetchJson(url, accessToken) {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
+  if (!response.ok) throw new Error(`Microsoft Graph returned ${response.status} while locating the SharePoint workbook.`);
+  return response.json();
+}
+
+async function resolveSharePointWorkbook(accessToken) {
+  const sp = config.sharePoint;
+  const hasIds = ["siteId", "driveId", "itemId"].every(k => sp[k] && !String(sp[k]).startsWith("YOUR_"));
+  if (hasIds) return { driveId: sp.driveId, itemId: sp.itemId, name: "UNICEF El Niño Activity Diary" };
+
+  const site = await graphFetchJson(`https://graph.microsoft.com/v1.0/sites/${encodeURIComponent(sp.hostname)}:${graphPath(sp.sitePath)}`, accessToken);
+  const drives = await graphFetchJson(`https://graph.microsoft.com/v1.0/sites/${encodeURIComponent(site.id)}/drives`, accessToken);
+  const libraryName = String(sp.libraryName).toLowerCase();
+  const drive = (drives.value || []).find(item => String(item.name).toLowerCase() === libraryName)
+    || (drives.value || []).find(item => item.webUrl && decodeURIComponent(new URL(item.webUrl).pathname).toLowerCase().endsWith(`/${libraryName}`));
+  if (!drive) throw new Error(`The SharePoint document library “${sp.libraryName}” was not found.`);
+
+  const item = await graphFetchJson(`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(drive.id)}/root:${graphPath(sp.filePath)}`, accessToken);
+  return { driveId: drive.id, itemId: item.id, name: item.name };
+}
+
 async function loadGraphData(interactive = false) {
   await initialiseMicrosoft();
   let account = msalClient.getAllAccounts()[0];
@@ -118,7 +150,7 @@ async function loadGraphData(interactive = false) {
     const login = await msalClient.loginPopup({ scopes, prompt: "select_account" });
     account = login.account;
   }
-  if (!account) throw new Error("Select Connect Microsoft 365 to load the private workbook.");
+  if (!account) throw new Error("Select Connect SharePoint to load the private workbook.");
   let token;
   try { token = await msalClient.acquireTokenSilent({ scopes, account }); }
   catch (error) {
@@ -126,13 +158,10 @@ async function loadGraphData(interactive = false) {
     token = await msalClient.acquireTokenPopup({ scopes, account });
   }
   const sp = config.sharePoint;
-  const url = `https://graph.microsoft.com/v1.0/sites/${encodeURIComponent(sp.siteId)}/drives/${encodeURIComponent(sp.driveId)}/items/${encodeURIComponent(sp.itemId)}/workbook/tables/${encodeURIComponent(sp.tableName)}/rows`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token.accessToken}` }, cache: "no-store" });
-  if (!response.ok) throw new Error(`Microsoft Graph returned ${response.status}. Check file permissions and identifiers.`);
-  const payload = await response.json();
-  const rows = (payload.value || []).map(row => row.values?.[0] || []).filter(row => row[1] !== null && row[1] !== "");
-  metadata = { isDemo: false, source: "SharePoint", table: sp.tableName, generatedAt: new Date().toISOString() };
-  return rows.map(row => normalizeActivity(Object.fromEntries(FIELD_ORDER.map((field, index) => [field, row[index]]))));
+  const item = await resolveSharePointWorkbook(token.accessToken);
+  const response = await fetch(`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(item.driveId)}/items/${encodeURIComponent(item.itemId)}/content`, { headers: { Authorization: `Bearer ${token.accessToken}` }, cache: "no-store" });
+  if (!response.ok) throw new Error(`Microsoft Graph returned ${response.status} while reading the SharePoint workbook.`);
+  return parseExcelData(await response.arrayBuffer(), { source: "SharePoint", fileName: item.name });
 }
 
 async function refreshData(interactive = false) {
@@ -172,7 +201,7 @@ function populateSelect(id, values, label) {
   if (values.includes(current)) $(id).value = current;
 }
 function populateFilters() {
-  populateSelect("sector-filter", unique("UNICEF Sector*"), "sectors");
+  populateSelect("unit-filter", unique("UNICEF Unit*"), "sectors");
   populateSelect("country-filter", unique("Country*"), "countries");
   populateSelect("phase-filter", unique("El Niño Phase*"), "phases");
   populateSelect("status-filter", unique("Implementation Status*"), "statuses");
@@ -180,10 +209,10 @@ function populateFilters() {
 
 function applyFilters() {
   const search = $("search-filter").value.trim().toLowerCase();
-  const sector = $("sector-filter").value, country = $("country-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
+  const unit = $("unit-filter").value, country = $("country-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
   filteredActivities = allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return (!search || haystack.includes(search)) && (!sector || d["UNICEF Sector*"] === sector) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
+    return (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
   });
   renderAll();
 }
@@ -241,11 +270,11 @@ function renderFollowup() {
 function statusClass(status) { return `status-${String(status || "").toLowerCase().replace(/\s+/g,"-")}`; }
 function renderLatest() {
   const latest = [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).slice(0,3);
-  $("latest-activities").innerHTML = latest.length ? latest.map(d => `<button class="activity-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="meta"><span>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Sector*"])}</span><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><h3>${escapeHtml(d["Activity Title*"])}</h3><p>${escapeHtml(d["Country*"])} · ${escapeHtml(d["Result / Output"] || "Result not reported")}</p></button>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  $("latest-activities").innerHTML = latest.length ? latest.map(d => `<button class="activity-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="meta"><span>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Unit*"])}</span><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><h3>${escapeHtml(d["Activity Title*"])}</h3><p>${escapeHtml(d["Country*"])} · ${escapeHtml(d["Result / Output"] || "Result not reported")}</p></button>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
 }
 function renderTimeline() {
   const rows = [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"]));
-  $("timeline").innerHTML = rows.length ? rows.map(d => `<article class="timeline-entry" style="--phase-color:${phaseColor(d["El Niño Phase*"])}"><time class="timeline-date">${fmtDate.format(new Date(d["Activity Date*"]))}</time><button class="timeline-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="timeline-card-head"><div><span class="phase-pill" style="color:${phaseColor(d["El Niño Phase*"])};background:${phaseColor(d["El Niño Phase*"])}18">${escapeHtml(d["El Niño Phase*"])}</span><h3>${escapeHtml(d["Activity Title*"])}</h3></div><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><p>${escapeHtml(d["What Was Done?*"])}</p><div class="timeline-tags"><span class="soft-tag">${escapeHtml(d["UNICEF Sector*"])}</span><span class="soft-tag">${escapeHtml(d["Country*"])}</span><span class="soft-tag">${escapeHtml(d["Activity Type*"])}</span><span class="soft-tag">${fmtNum.format(d["Children Reached"])} children</span></div></button></article>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  $("timeline").innerHTML = rows.length ? rows.map(d => `<article class="timeline-entry" style="--phase-color:${phaseColor(d["El Niño Phase*"])}"><time class="timeline-date">${fmtDate.format(new Date(d["Activity Date*"]))}</time><button class="timeline-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="timeline-card-head"><div><span class="phase-pill" style="color:${phaseColor(d["El Niño Phase*"])};background:${phaseColor(d["El Niño Phase*"])}18">${escapeHtml(d["El Niño Phase*"])}</span><h3>${escapeHtml(d["Activity Title*"])}</h3></div><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><p>${escapeHtml(d["What Was Done?*"])}</p><div class="timeline-tags"><span class="soft-tag">${escapeHtml(d["UNICEF Unit*"])}</span><span class="soft-tag">${escapeHtml(d["Country*"])}</span><span class="soft-tag">${escapeHtml(d["Activity Type*"])}</span><span class="soft-tag">${fmtNum.format(d["Children Reached"])} children</span></div></button></article>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
 }
 
 function initMap() {
@@ -261,7 +290,7 @@ function renderMap() {
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
     const marker = L.circleMarker([d.latitude,lng], { radius: 9, color: "#fff", weight: 2, fillColor: phaseColor(d["El Niño Phase*"]), fillOpacity: .95 });
-    marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Sector*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
+    marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);
   });
   if (bounds.length) map.fitBounds(bounds,{padding:[40,40],maxZoom:5});
@@ -271,7 +300,7 @@ function renderMap() {
 }
 
 function renderRegister() {
-  $("register-body").innerHTML = filteredActivities.length ? [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).map(d => `<tr><td>${fmtDate.format(new Date(d["Activity Date*"]))}</td><td><strong>${escapeHtml(d["UNICEF Sector*"])}</strong></td><td>${escapeHtml(d["Country*"])}<br><small>${escapeHtml(d["Location / Admin Area"])}</small></td><td>${escapeHtml(d["Activity Title*"])}</td><td>${escapeHtml(d["El Niño Phase*"])}</td><td><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></td><td>${fmtNum.format(d["People Reached (Total)"])}</td><td>${fmtUSD.format(d["Funding Used (USD)"])}</td><td><button class="row-button" data-entry="${escapeHtml(d["Entry ID"])}" type="button">View →</button></td></tr>`).join("") : `<tr><td colspan="9" class="empty-state">No activities match these filters.</td></tr>`;
+  $("register-body").innerHTML = filteredActivities.length ? [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).map(d => `<tr><td>${fmtDate.format(new Date(d["Activity Date*"]))}</td><td><strong>${escapeHtml(d["UNICEF Unit*"])}</strong></td><td>${escapeHtml(d["Country*"])}<br><small>${escapeHtml(d["Location / Admin Area"])}</small></td><td>${escapeHtml(d["Activity Title*"])}</td><td>${escapeHtml(d["El Niño Phase*"])}</td><td><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></td><td>${fmtNum.format(d["People Reached (Total)"])}</td><td>${fmtUSD.format(d["Funding Used (USD)"])}</td><td><button class="row-button" data-entry="${escapeHtml(d["Entry ID"])}" type="button">View →</button></td></tr>`).join("") : `<tr><td colspan="9" class="empty-state">No activities match these filters.</td></tr>`;
 }
 
 function detailItem(label, value, full = false, format) {
@@ -281,8 +310,8 @@ function detailItem(label, value, full = false, format) {
 function openDetail(entryId) {
   const d = allActivities.find(row => row["Entry ID"] === entryId); if (!d) return;
   const evidence = metadata.isDemo ? escapeHtml(d["Evidence Link"] || "Not reported") + " (illustrative link)" : (/^https?:\/\//.test(d["Evidence Link"]) ? `<a class="detail-link" href="${escapeHtml(d["Evidence Link"])}" target="_blank" rel="noopener">Open supporting evidence ↗</a>` : "Not reported");
-  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Sector*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
-    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF Sector",d["UNICEF Sector*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
+  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
+    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF Unit*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
     <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem("People reached",d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem("Children reached",d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem("Funding used",d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
     <section class="detail-group full"><h3>Activity narrative</h3><div class="detail-grid">${detailItem("Activity title",d["Activity Title*"],true)}${detailItem("What was done?",d["What Was Done?*"],true)}</div></section>
     <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,v=>fmtDate.format(new Date(v)))}</div></section>
@@ -291,7 +320,7 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("sector-bars",group("UNICEF Sector*")); renderRankBars("reach-bars",group("UNICEF Sector*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
@@ -303,10 +332,19 @@ function showToast(message) { const toast = $("toast"); toast.textContent = mess
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click",()=>switchView(tab.dataset.view)));
 document.querySelectorAll("[data-go-view]").forEach(button => button.addEventListener("click",()=>switchView(button.dataset.goView)));
-["search-filter","sector-filter","country-filter","phase-filter","status-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
-$("clear-filters").addEventListener("click",()=>{ ["search-filter","sector-filter","country-filter","phase-filter","status-filter"].forEach(id=>$(id).value=""); applyFilters(); });
+["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
+$("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id=>$(id).value=""); applyFilters(); });
 $("refresh-button").addEventListener("click",()=>refreshData(false));
-$("connect-button").addEventListener("click",()=>refreshData(true));
+$("connect-button").addEventListener("click",async()=>{
+  const previousFile = uploadedWorkbookFile;
+  uploadedWorkbookFile = undefined;
+  const loaded = await refreshData(true);
+  if (!loaded && previousFile) {
+    uploadedWorkbookFile = previousFile;
+    await refreshData(false);
+    showToast("SharePoint could not be loaded. Continuing with the selected Excel file.");
+  }
+});
 $("excel-upload-button").addEventListener("click",()=>$("excel-file-input").click());
 $("excel-file-input").addEventListener("change",async event=>{
   const file = event.target.files?.[0];
