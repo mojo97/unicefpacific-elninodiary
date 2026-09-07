@@ -172,7 +172,7 @@ function populateSelect(id, values, label) {
   if (values.includes(current)) $(id).value = current;
 }
 function populateFilters() {
-  populateSelect("sector-filter", unique("UNICEF sector*"), "sectors");
+  populateSelect("sector-filter", unique("UNICEF Sector*"), "sectors");
   populateSelect("country-filter", unique("Country*"), "countries");
   populateSelect("phase-filter", unique("El Niño Phase*"), "phases");
   populateSelect("status-filter", unique("Implementation Status*"), "statuses");
@@ -183,7 +183,7 @@ function applyFilters() {
   const sector = $("sector-filter").value, country = $("country-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
   filteredActivities = allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return (!search || haystack.includes(search)) && (!sector || d["UNICEF sector*"] === sector) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
+    return (!search || haystack.includes(search)) && (!sector || d["UNICEF Sector*"] === sector) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
   });
   renderAll();
 }
@@ -241,11 +241,11 @@ function renderFollowup() {
 function statusClass(status) { return `status-${String(status || "").toLowerCase().replace(/\s+/g,"-")}`; }
 function renderLatest() {
   const latest = [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).slice(0,3);
-  $("latest-activities").innerHTML = latest.length ? latest.map(d => `<button class="activity-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="meta"><span>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF sector*"])}</span><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><h3>${escapeHtml(d["Activity Title*"])}</h3><p>${escapeHtml(d["Country*"])} · ${escapeHtml(d["Result / Output"] || "Result not reported")}</p></button>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  $("latest-activities").innerHTML = latest.length ? latest.map(d => `<button class="activity-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="meta"><span>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Sector*"])}</span><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><h3>${escapeHtml(d["Activity Title*"])}</h3><p>${escapeHtml(d["Country*"])} · ${escapeHtml(d["Result / Output"] || "Result not reported")}</p></button>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
 }
 function renderTimeline() {
   const rows = [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"]));
-  $("timeline").innerHTML = rows.length ? rows.map(d => `<article class="timeline-entry" style="--phase-color:${phaseColor(d["El Niño Phase*"])}"><time class="timeline-date">${fmtDate.format(new Date(d["Activity Date*"]))}</time><button class="timeline-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="timeline-card-head"><div><span class="phase-pill" style="color:${phaseColor(d["El Niño Phase*"])};background:${phaseColor(d["El Niño Phase*"])}18">${escapeHtml(d["El Niño Phase*"])}</span><h3>${escapeHtml(d["Activity Title*"])}</h3></div><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><p>${escapeHtml(d["What Was Done?*"])}</p><div class="timeline-tags"><span class="soft-tag">${escapeHtml(d["UNICEF sector*"])}</span><span class="soft-tag">${escapeHtml(d["Country*"])}</span><span class="soft-tag">${escapeHtml(d["Activity Type*"])}</span><span class="soft-tag">${fmtNum.format(d["Children Reached"])} children</span></div></button></article>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  $("timeline").innerHTML = rows.length ? rows.map(d => `<article class="timeline-entry" style="--phase-color:${phaseColor(d["El Niño Phase*"])}"><time class="timeline-date">${fmtDate.format(new Date(d["Activity Date*"]))}</time><button class="timeline-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="timeline-card-head"><div><span class="phase-pill" style="color:${phaseColor(d["El Niño Phase*"])};background:${phaseColor(d["El Niño Phase*"])}18">${escapeHtml(d["El Niño Phase*"])}</span><h3>${escapeHtml(d["Activity Title*"])}</h3></div><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><p>${escapeHtml(d["What Was Done?*"])}</p><div class="timeline-tags"><span class="soft-tag">${escapeHtml(d["UNICEF Sector*"])}</span><span class="soft-tag">${escapeHtml(d["Country*"])}</span><span class="soft-tag">${escapeHtml(d["Activity Type*"])}</span><span class="soft-tag">${fmtNum.format(d["Children Reached"])} children</span></div></button></article>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
 }
 
 function initMap() {
@@ -261,7 +261,7 @@ function renderMap() {
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
     const marker = L.circleMarker([d.latitude,lng], { radius: 9, color: "#fff", weight: 2, fillColor: phaseColor(d["El Niño Phase*"]), fillOpacity: .95 });
-    marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF sector*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
+    marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Sector*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);
   });
   if (bounds.length) map.fitBounds(bounds,{padding:[40,40],maxZoom:5});
@@ -271,7 +271,7 @@ function renderMap() {
 }
 
 function renderRegister() {
-  $("register-body").innerHTML = filteredActivities.length ? [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).map(d => `<tr><td>${fmtDate.format(new Date(d["Activity Date*"]))}</td><td><strong>${escapeHtml(d["UNICEF sector*"])}</strong></td><td>${escapeHtml(d["Country*"])}<br><small>${escapeHtml(d["Location / Admin Area"])}</small></td><td>${escapeHtml(d["Activity Title*"])}</td><td>${escapeHtml(d["El Niño Phase*"])}</td><td><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></td><td>${fmtNum.format(d["People Reached (Total)"])}</td><td>${fmtUSD.format(d["Funding Used (USD)"])}</td><td><button class="row-button" data-entry="${escapeHtml(d["Entry ID"])}" type="button">View →</button></td></tr>`).join("") : `<tr><td colspan="9" class="empty-state">No activities match these filters.</td></tr>`;
+  $("register-body").innerHTML = filteredActivities.length ? [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).map(d => `<tr><td>${fmtDate.format(new Date(d["Activity Date*"]))}</td><td><strong>${escapeHtml(d["UNICEF Sector*"])}</strong></td><td>${escapeHtml(d["Country*"])}<br><small>${escapeHtml(d["Location / Admin Area"])}</small></td><td>${escapeHtml(d["Activity Title*"])}</td><td>${escapeHtml(d["El Niño Phase*"])}</td><td><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></td><td>${fmtNum.format(d["People Reached (Total)"])}</td><td>${fmtUSD.format(d["Funding Used (USD)"])}</td><td><button class="row-button" data-entry="${escapeHtml(d["Entry ID"])}" type="button">View →</button></td></tr>`).join("") : `<tr><td colspan="9" class="empty-state">No activities match these filters.</td></tr>`;
 }
 
 function detailItem(label, value, full = false, format) {
@@ -281,8 +281,8 @@ function detailItem(label, value, full = false, format) {
 function openDetail(entryId) {
   const d = allActivities.find(row => row["Entry ID"] === entryId); if (!d) return;
   const evidence = metadata.isDemo ? escapeHtml(d["Evidence Link"] || "Not reported") + " (illustrative link)" : (/^https?:\/\//.test(d["Evidence Link"]) ? `<a class="detail-link" href="${escapeHtml(d["Evidence Link"])}" target="_blank" rel="noopener">Open supporting evidence ↗</a>` : "Not reported");
-  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF sector*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
-    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF sector*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
+  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Sector*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
+    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF Sector",d["UNICEF Sector*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
     <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem("People reached",d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem("Children reached",d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem("Funding used",d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
     <section class="detail-group full"><h3>Activity narrative</h3><div class="detail-grid">${detailItem("Activity title",d["Activity Title*"],true)}${detailItem("What was done?",d["What Was Done?*"],true)}</div></section>
     <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,v=>fmtDate.format(new Date(v)))}</div></section>
@@ -291,7 +291,7 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("sector-bars",group("UNICEF sector*")); renderRankBars("reach-bars",group("UNICEF sector*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("sector-bars",group("UNICEF Sector*")); renderRankBars("reach-bars",group("UNICEF Sector*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
