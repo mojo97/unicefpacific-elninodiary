@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="UNICEF Pacific El Niño activity analysis, timeline and map.">
-  <title>UNICEF Pacific El Niño Activity Diary</title>
+  <title>Pacific El Niño Activity Diary</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
       <div class="unicef-logo-shell">
         <img class="unicef-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Logo_of_UNICEF.svg" alt="UNICEF">
       </div>
-      <div><p class="eyebrow">UNICEF Pacific · </p><h1>El Niño Activity Diary</h1></div>
+      <div><p class="eyebrow">UNICEF Pacific · Internal decision support</p><h1>El Niño Activity Diary</h1></div>
     </div>
     <div class="header-actions">
       <div class="sync-state" id="sync-state"><i></i><span>Demonstration data</span></div>
@@ -29,13 +29,14 @@
     </div>
   </header>
 
-  <div class="demo-banner" id="demo-banner"><strong>Demonstration:</strong> Dummy Data for the usage of analysis. Do not report these figures as actual results.</div>
+  <div class="demo-banner" id="demo-banner"><strong>Demonstration:</strong> the Activity Diary sheet is empty, so this preview uses the workbook’s five illustrative entries. Do not report these figures as actual results.</div>
 
   <nav class="view-tabs" aria-label="Dashboard views">
     <button class="tab active" data-view="overview" type="button">Overview</button>
     <button class="tab" data-view="timeline" type="button">Activity timeline</button>
     <button class="tab" data-view="map" type="button">Map</button>
     <button class="tab" data-view="register" type="button">Activity register</button>
+    <button class="tab" data-view="sitrep" type="button">Situation report</button>
   </nav>
 
   <section class="filter-bar" aria-label="Dashboard filters">
@@ -82,6 +83,21 @@
     <section class="view" id="view-register">
       <div class="view-intro"><div><p class="section-kicker">AUDITABLE REGISTER</p><h2>Every diary entry</h2></div><p>Select a row to see all 21 workbook fields.</p></div>
       <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>UNICEF Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
+    </section>
+
+    <section class="view" id="view-sitrep">
+      <div class="sitrep-toolbar">
+        <div>
+          <p class="section-kicker">COUNTRY REPORT</p>
+          <h2>OCHA-style situation report</h2>
+          <p>Select one country. Sector, phase, status and search filters remain active.</p>
+        </div>
+        <div class="sitrep-actions">
+          <label><span>Country report</span><select id="sitrep-country" aria-label="Situation report country"></select></label>
+          <button class="button sitrep-print-button" id="sitrep-print" type="button">Print / Save PDF</button>
+        </div>
+      </div>
+      <article class="sitrep-paper" id="sitrep-paper" aria-live="polite"></article>
     </section>
   </main>
 

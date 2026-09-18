@@ -135,6 +135,57 @@ td { padding: 14px; border-top: 1px solid #e7eef1; font-size: 13px; vertical-ali
 tbody tr:hover { background: #f7fbfc; }
 .row-button { color: var(--blue); border: 0; background: transparent; font-weight: 800; }
 
+.sitrep-toolbar { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 3px 0 18px; }
+.sitrep-toolbar h2 { margin: 3px 0 5px; font: 800 clamp(22px,3vw,30px) Manrope,sans-serif; }
+.sitrep-toolbar p { margin: 0; color: var(--muted); font-size: 13px; }
+.sitrep-actions { display: flex; align-items: end; gap: 10px; }
+.sitrep-actions label span { display: block; margin: 0 0 5px 3px; color: #6d7f89; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.sitrep-actions select { min-width: 220px; height: 42px; padding: 0 11px; color: var(--ink); border: 1px solid #cfdee3; border-radius: 10px; background: #fff; }
+.sitrep-print-button { height: 42px; color: #fff; background: #006f9e; }
+.sitrep-paper { --ocha: #006f9e; --ocha-dark: #003b5c; --ocha-red: #c94b40; overflow: hidden; border: 1px solid #ccd9df; border-radius: 3px; background: #fff; box-shadow: 0 14px 38px rgba(7,27,43,.1); }
+.sitrep-masthead { display: flex; align-items: flex-start; justify-content: space-between; gap: 25px; padding: 24px 28px 20px; color: #fff; background: linear-gradient(115deg,var(--ocha-dark),var(--ocha)); border-top: 6px solid var(--ocha-red); }
+.sitrep-kicker { margin: 0 0 8px; color: #b9e6f4; font-size: 11px; font-weight: 800; letter-spacing: .15em; }
+.sitrep-masthead h2 { margin: 0; font: 800 clamp(30px,5vw,48px)/1 Manrope,sans-serif; letter-spacing: -.04em; }
+.sitrep-period { margin: 9px 0 0; color: #d8edf4; font-size: 13px; }
+.sitrep-mark { display: grid; justify-items: end; gap: 10px; color: #d8edf4; font-size: 10px; }
+.sitrep-mark img { width: 115px; padding: 8px 10px; border-radius: 5px; background: #fff; }
+.sitrep-figures { display: grid; grid-template-columns: repeat(5,1fr); border-bottom: 1px solid #dbe5e9; background: #f3f7f8; }
+.sitrep-figures div { padding: 14px 18px; border-right: 1px solid #dbe5e9; }
+.sitrep-figures div:last-child { border-right: 0; }
+.sitrep-figures strong { display: block; color: var(--ocha-dark); font: 800 22px Manrope,sans-serif; }
+.sitrep-figures span { color: #5d717b; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.sitrep-overview { padding: 20px 28px 17px; }
+.sitrep-section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.sitrep-section-title > span { width: 27px; height: 27px; display: grid; place-items: center; color: #fff; background: var(--ocha-red); font-size: 10px; font-weight: 800; }
+.sitrep-section-title h3 { margin: 0; color: var(--ocha-dark); font: 800 18px Manrope,sans-serif; }
+.sitrep-overview ul { display: grid; grid-template-columns: repeat(3,1fr); gap: 17px; margin: 0; padding: 0; list-style: none; }
+.sitrep-overview li { padding-left: 12px; border-left: 3px solid #8cc5d9; color: #314a57; font-size: 12px; line-height: 1.5; }
+.sitrep-overview li span { color: #768992; white-space: nowrap; }
+.response-title { margin: 0 28px 11px; padding-top: 16px; border-top: 1px solid #dbe5e9; }
+.sitrep-sector-list { padding: 0 28px 20px; }
+.sitrep-sector { margin-bottom: 12px; border: 1px solid #d5e0e5; break-inside: avoid; }
+.sitrep-sector-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 9px 13px; color: #fff; background: var(--ocha-dark); }
+.sitrep-sector-head span { display: block; color: #a9d7e7; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.sitrep-sector-head h3 { margin: 1px 0 0; font: 800 15px Manrope,sans-serif; }
+.sitrep-sector-head p { margin: 0; color: #d3e9f0; font-size: 10px; }
+.sitrep-sector-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+.sitrep-column { min-width: 0; padding: 12px 13px; border-right: 1px solid #dce6ea; }
+.sitrep-column:last-child { border-right: 0; }
+.sitrep-column h4 { margin: 0 0 8px; color: var(--ocha); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.sitrep-column h5 { margin: 9px 0 5px; color: var(--ocha-red); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.sitrep-column p, .sitrep-column li { color: #314a57; font-size: 11px; line-height: 1.42; }
+.sitrep-column p { margin: 0; }
+.sitrep-column ul { margin: 0; padding-left: 16px; }
+.sitrep-column li + li { margin-top: 4px; }
+.sitrep-column small { display: block; margin-top: 8px; color: #71858e; font-size: 9px; line-height: 1.4; }
+.sitrep-gaps { background: #fff9f7; }
+.sitrep-not-reported { color: #809098 !important; font-style: italic; }
+.sitrep-foot { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; padding: 12px 28px; color: #5d717b; background: #edf3f5; font-size: 9px; line-height: 1.45; }
+.sitrep-foot p { margin: 0; }
+.sitrep-empty { padding: 80px 25px; text-align: center; }
+.sitrep-empty strong { display: block; color: var(--ocha-dark); font: 800 22px Manrope,sans-serif; }
+.sitrep-empty p { color: var(--muted); }
+
 footer { display: flex; justify-content: space-between; gap: 18px; padding: 16px clamp(18px,4vw,58px); color: #b7cad2; background: var(--navy); font-size: 12px; }
 footer p { margin: 0; }
 dialog { width: min(920px,calc(100% - 28px)); max-height: 88vh; padding: 0; border: 0; border-radius: 20px; color: var(--ink); box-shadow: 0 30px 80px rgba(0,0,0,.3); }
@@ -186,6 +237,14 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .map-summary { border-left: 0; border-top: 1px solid var(--line); }
   .detail-groups,.detail-grid { grid-template-columns: 1fr; }
   .detail-group.full,.detail-item.full { grid-column: auto; }
+  .sitrep-toolbar { align-items: stretch; flex-direction: column; }
+  .sitrep-actions { align-items: stretch; flex-direction: column; }
+  .sitrep-actions select { width: 100%; }
+  .sitrep-figures { grid-template-columns: repeat(2,1fr); }
+  .sitrep-figures div { border-bottom: 1px solid #dbe5e9; }
+  .sitrep-overview ul,.sitrep-sector-grid,.sitrep-foot { grid-template-columns: 1fr; }
+  .sitrep-column { border-right: 0; border-bottom: 1px solid #dce6ea; }
+  .sitrep-sector-head { align-items: flex-start; flex-direction: column; gap: 5px; }
   footer { flex-direction: column; }
 }
 @media (max-width: 480px) {
@@ -195,4 +254,38 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .search-control { grid-column: auto; }
   .sync-state { width: 100%; }
   .phase-ribbon { grid-template-columns: 1fr; }
+}
+
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body { min-width: 0; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body > * { display: none !important; }
+  body > main { display: block !important; max-width: none; margin: 0; padding: 0; }
+  main > .view { display: none !important; }
+  #view-sitrep { display: block !important; }
+  .sitrep-toolbar { display: none !important; }
+  .sitrep-paper { border: 0; box-shadow: none; }
+  .sitrep-masthead { padding: 12px 16px 10px; border-top-width: 4px; }
+  .sitrep-masthead h2 { font-size: 27px; }
+  .sitrep-mark img { width: 90px; padding: 5px 7px; }
+  .sitrep-figures div { padding: 7px 10px; }
+  .sitrep-figures strong { font-size: 16px; }
+  .sitrep-overview { padding: 10px 16px 8px; }
+  .sitrep-overview li { font-size: 8px; line-height: 1.3; }
+  .sitrep-section-title { margin-bottom: 6px; }
+  .sitrep-section-title > span { width: 20px; height: 20px; font-size: 8px; }
+  .sitrep-section-title h3 { font-size: 13px; }
+  .response-title { margin: 0 16px 6px; padding-top: 7px; }
+  .sitrep-sector-list { padding: 0 16px 7px; }
+  .sitrep-sector { margin-bottom: 5px; }
+  .sitrep-sector-head { padding: 4px 8px; }
+  .sitrep-sector-head h3 { font-size: 10px; }
+  .sitrep-sector-head p { font-size: 7px; }
+  .sitrep-column { padding: 6px 8px; }
+  .sitrep-column h4 { margin-bottom: 3px; font-size: 7px; }
+  .sitrep-column h5 { margin: 4px 0 2px; font-size: 6.5px; }
+  .sitrep-column p,.sitrep-column li { font-size: 7px; line-height: 1.25; }
+  .sitrep-column li + li { margin-top: 2px; }
+  .sitrep-column small { margin-top: 3px; font-size: 6.5px; }
+  .sitrep-foot { padding: 6px 16px; font-size: 6.5px; }
 }

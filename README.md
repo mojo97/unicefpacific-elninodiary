@@ -1,6 +1,6 @@
 # UNICEF Pacific El Niño Activity Diary
 
-This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a chronological activity timeline, a country-level map, a searchable register, and a complete record view.
+This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a chronological activity timeline, a country-level map, a searchable register, a complete record view, and a print-ready country Situation Report.
 
 The header now includes the UNICEF logo. Use of the UNICEF name and logo should remain limited to an authorised UNICEF deployment and follow current organisational brand guidance.
 
@@ -37,6 +37,23 @@ Every workbook field is used:
 | Evidence Link | Record detail |
 | Focal Point | Record detail |
 | Submission Date | Reporting-lag signal and record detail |
+
+## Country Situation Report
+
+Open **Situation report** in the navigation, then select a country. The page groups reporting by UNICEF Sector and presents a compact OCHA-style structure:
+
+| Situation report section | Activity Diary source |
+|---|---|
+| Situation overview / sector situation update | `Result / Output` (falling back to Activity Title only when no result is entered) |
+| UNICEF interventions | `What Was Done?*` |
+| Gaps | `Challenges` |
+| Priority actions | `Next Step` |
+| Key figures | Activities, People Reached, Children Reached, Funding Used and Implementation Status |
+| Context and assurance | Country, Location, Phase, Activity Date, Submission Date, Partners and Evidence Link |
+
+The country selector is specific to the report. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
+
+The report is a draft synthesized from activity records, not a replacement for a validated humanitarian needs assessment. Review the generated narrative, totals, evidence and any personal information before external circulation. With many sectors or unusually long narratives, the browser may continue the report onto a second page rather than cut content.
 
 The workbook has no latitude or longitude columns. The map therefore places activities at country centroids and shows the reported Location / Admin Area as text. To show exact locations later, add validated `Latitude` and `Longitude` columns and extend the map logic.
 
