@@ -328,7 +328,11 @@ function sitrepFilterRows() {
   const country = $("sitrep-country").value;
   return allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return d["Country*"] === country && (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
+    return (!country || d["Country*"] === country) &&
+  (!search || haystack.includes(search)) &&
+  (!unit || d["UNICEF Unit*"] === unit) &&
+  (!phase || d["El Niño Phase*"] === phase) &&
+  (!status || d["Implementation Status*"] === status);
   });
 }
 
@@ -342,7 +346,8 @@ function narrativeList(items, emptyText) {
 
 function renderSitrep() {
   const rows = sitrepFilterRows().sort((a,b) => new Date(b["Activity Date*"]) - new Date(a["Activity Date*"]));
-  const country = $("sitrep-country").value || "Country not selected";
+  const selectedCountry = $("sitrep-country").value;
+const country = selectedCountry || "All countries";
   if (!rows.length) {
     $("sitrep-paper").innerHTML = `<div class="sitrep-empty"><strong>No reportable activities for ${escapeHtml(country)}</strong><p>Change the country or clear the sector, phase, status and search filters.</p></div>`;
     return;
@@ -368,7 +373,7 @@ function renderSitrep() {
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     return `<section class="sitrep-sector">
-      <header class="sitrep-sector-head"><div><span>UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
+      <header class="sitrep-sector-head"><div><span>${selectedCountry ? "UNICEF SECTOR" : "ALL COUNTRIES · UNICEF SECTOR"}</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
       <div class="sitrep-sector-grid">
         <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || country)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
         <div class="sitrep-column"><h4>UNICEF interventions</h4>${narrativeList(interventions,"No intervention narrative reported.")}<small>${partners.length ? `Partners: ${escapeHtml(partners.slice(0,4).join(", "))}` : "Partners not reported"}</small></div>
