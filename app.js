@@ -353,7 +353,7 @@ function renderSitrep() {
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     return `<section class="sitrep-sector">
-      <header class="sitrep-sector-head"><div><span>UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
+      <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
       <div class="sitrep-sector-grid">
         <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || countryName)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
         <div class="sitrep-column"><h4>UNICEF interventions</h4>${narrativeList(interventions,"No intervention narrative reported.")}<small>${partners.length ? `Partners: ${escapeHtml(partners.slice(0,4).join(", "))}` : "Partners not reported"}</small></div>
@@ -377,8 +377,9 @@ function renderSitrep() {
     return `<section class="sitrep-country-group">${countryHeading}<div class="sitrep-country-sectors">${sectors}</div></section>`;
   }).join("");
 
+  const reportScope = selectedCountry ? `Country: ${selectedCountry}` : `Regional overview · ${countryNames.length} ${countryNames.length === 1 ? "country" : "countries"}`;
   $("sitrep-paper").innerHTML = `<header class="sitrep-masthead">
-      <div><p class="sitrep-kicker">PACIFIC EL NIÑO · SITUATION REPORT</p><h2>${escapeHtml(reportTitle)}</h2><p class="sitrep-period">Reporting period: ${period}</p></div>
+      <div><p class="sitrep-kicker">UNICEF PACIFIC · HUMANITARIAN REPORTING</p><h2>El Niño Situation Report</h2><p class="sitrep-period"><strong>${escapeHtml(reportScope)}</strong> · Reporting period: ${period}</p></div>
       <div class="sitrep-mark"><img src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Logo_of_UNICEF.svg" alt="UNICEF"><span>Generated ${fmtDate.format(new Date())}</span></div>
     </header>
     <section class="sitrep-figures" aria-label="Key figures">

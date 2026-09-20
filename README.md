@@ -42,6 +42,8 @@ Every workbook field is used:
 
 Open **Situation report** in the navigation, then select one country or **All countries**. An individual-country report is grouped by UNICEF Sector. The All countries report keeps every country separate and then groups its activities by UNICEF Sector, using the hierarchy **Country → UNICEF Sector → situation, interventions, gaps and priority actions**.
 
+The report masthead is titled **El Niño Situation Report**. When All countries is selected, the report uses a regional-overview subtitle and labels every sector row with its actual country name, for example **Fiji · UNICEF Sector**. It does not use “All countries” as a country name inside the report.
+
 | Situation report section | Activity Diary source |
 |---|---|
 | Situation overview / sector situation update | `Result / Output` (falling back to Activity Title only when no result is entered) |
