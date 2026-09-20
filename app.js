@@ -205,11 +205,25 @@ function populateFilters() {
   populateSelect("country-filter", unique("Country*"), "countries");
   populateSelect("phase-filter", unique("El Niño Phase*"), "phases");
   populateSelect("status-filter", unique("Implementation Status*"), "statuses");
-  const countries = unique("Country*");
-  const currentReportCountry = $("sitrep-country").value;
-  $("sitrep-country").innerHTML = countries.map(country => `<option>${escapeHtml(country)}</option>`).join("");
-  if (countries.includes(currentReportCountry)) $("sitrep-country").value = currentReportCountry;
-  else if (countries.length) $("sitrep-country").value = countries.find(country => !/multi-country|pacific region/i.test(country)) || countries[0];
+const countries = unique("Country*");
+const currentReportCountry = $("sitrep-country").value;
+
+$("sitrep-country").innerHTML =
+  `<option value="">All countries</option>` +
+  countries
+    .map(country =>
+      `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`
+    )
+    .join("");
+
+if (
+  currentReportCountry === "" ||
+  countries.includes(currentReportCountry)
+) {
+  $("sitrep-country").value = currentReportCountry;
+} else {
+  $("sitrep-country").value = "";
+}
 }
 
 function applyFilters() {
