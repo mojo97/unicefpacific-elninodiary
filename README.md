@@ -40,7 +40,7 @@ Every workbook field is used:
 
 ## Country Situation Report
 
-Open **Situation report** in the navigation, then select a country. The page groups reporting by UNICEF Sector and presents a compact OCHA-style structure:
+Open **Situation report** in the navigation, then select one country or **All countries**. An individual-country report is grouped by UNICEF Sector. The All countries report keeps every country separate and then groups its activities by UNICEF Sector, using the hierarchy **Country → UNICEF Sector → situation, interventions, gaps and priority actions**.
 
 | Situation report section | Activity Diary source |
 |---|---|
@@ -51,7 +51,7 @@ Open **Situation report** in the navigation, then select a country. The page gro
 | Key figures | Activities, People Reached, Children Reached, Funding Used and Implementation Status |
 | Context and assurance | Country, Location, Phase, Activity Date, Submission Date, Partners and Evidence Link |
 
-The country selector is specific to the report. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
+The country selector is specific to the report and begins with **All countries**. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
 
 The report is a draft synthesized from activity records, not a replacement for a validated humanitarian needs assessment. Review the generated narrative, totals, evidence and any personal information before external circulation. With many sectors or unusually long narratives, the browser may continue the report onto a second page rather than cut content.
 

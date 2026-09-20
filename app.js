@@ -205,25 +205,10 @@ function populateFilters() {
   populateSelect("country-filter", unique("Country*"), "countries");
   populateSelect("phase-filter", unique("El Niño Phase*"), "phases");
   populateSelect("status-filter", unique("Implementation Status*"), "statuses");
-const countries = unique("Country*");
-const currentReportCountry = $("sitrep-country").value;
-
-$("sitrep-country").innerHTML =
-  `<option value="">All countries</option>` +
-  countries
-    .map(country =>
-      `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`
-    )
-    .join("");
-
-if (
-  currentReportCountry === "" ||
-  countries.includes(currentReportCountry)
-) {
-  $("sitrep-country").value = currentReportCountry;
-} else {
-  $("sitrep-country").value = "";
-}
+  const countries = unique("Country*");
+  const currentReportCountry = $("sitrep-country").value;
+  $("sitrep-country").innerHTML = `<option value="">All countries</option>` + countries.map(country => `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`).join("");
+  $("sitrep-country").value = countries.includes(currentReportCountry) ? currentReportCountry : "";
 }
 
 function applyFilters() {
@@ -328,11 +313,7 @@ function sitrepFilterRows() {
   const country = $("sitrep-country").value;
   return allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return (!country || d["Country*"] === country) &&
-  (!search || haystack.includes(search)) &&
-  (!unit || d["UNICEF Unit*"] === unit) &&
-  (!phase || d["El Niño Phase*"] === phase) &&
-  (!status || d["Implementation Status*"] === status);
+    return (!country || d["Country*"] === country) && (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
   });
 }
 
@@ -347,9 +328,9 @@ function narrativeList(items, emptyText) {
 function renderSitrep() {
   const rows = sitrepFilterRows().sort((a,b) => new Date(b["Activity Date*"]) - new Date(a["Activity Date*"]));
   const selectedCountry = $("sitrep-country").value;
-const country = selectedCountry || "All countries";
+  const reportTitle = selectedCountry || "All countries";
   if (!rows.length) {
-    $("sitrep-paper").innerHTML = `<div class="sitrep-empty"><strong>No reportable activities for ${escapeHtml(country)}</strong><p>Change the country or clear the sector, phase, status and search filters.</p></div>`;
+    $("sitrep-paper").innerHTML = `<div class="sitrep-empty"><strong>No reportable activities for ${escapeHtml(reportTitle)}</strong><p>Change the country or clear the sector, phase, status and search filters.</p></div>`;
     return;
   }
 
@@ -361,10 +342,9 @@ const country = selectedCountry || "All countries";
   const active = rows.filter(row => row["Implementation Status*"] !== "Completed").length;
   const evidence = rows.filter(row => /^https?:\/\//.test(row["Evidence Link"])).length;
   const latestUpdates = rows.filter(row => row["Result / Output"]).slice(0, 3);
-  const sectorNames = [...new Set(rows.map(row => row["UNICEF Unit*"] || "Sector not reported"))].sort();
+  const countryNames = selectedCountry ? [selectedCountry] : [...new Set(rows.map(row => row["Country*"] || "Country not reported"))].sort();
 
-  const sectors = sectorNames.map(sector => {
-    const sectorRows = rows.filter(row => (row["UNICEF Unit*"] || "Sector not reported") === sector);
+  const renderSector = (sectorRows, sector, countryName) => {
     const latest = sectorRows[0];
     const situation = latest["Result / Output"] || latest["Activity Title*"] || "No situation update reported.";
     const interventions = uniqueNarratives(sectorRows,"What Was Done?*",2);
@@ -373,17 +353,32 @@ const country = selectedCountry || "All countries";
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     return `<section class="sitrep-sector">
-      <header class="sitrep-sector-head"><div><span>${selectedCountry ? "UNICEF SECTOR" : "ALL COUNTRIES · UNICEF SECTOR"}</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
+      <header class="sitrep-sector-head"><div><span>UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
       <div class="sitrep-sector-grid">
-        <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || country)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
+        <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || countryName)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
         <div class="sitrep-column"><h4>UNICEF interventions</h4>${narrativeList(interventions,"No intervention narrative reported.")}<small>${partners.length ? `Partners: ${escapeHtml(partners.slice(0,4).join(", "))}` : "Partners not reported"}</small></div>
         <div class="sitrep-column sitrep-gaps"><h4>Gaps & priority actions</h4>${narrativeList(challenges,"No gaps reported.")}<h5>Priority actions</h5>${narrativeList(nextSteps,"No next step reported.")}</div>
       </div>
     </section>`;
+  };
+
+  const countrySections = countryNames.map(countryName => {
+    const countryRows = rows.filter(row => (row["Country*"] || "Country not reported") === countryName);
+    const sectorNames = [...new Set(countryRows.map(row => row["UNICEF Unit*"] || "Sector not reported"))].sort();
+    const sectors = sectorNames.map(sector => renderSector(
+      countryRows.filter(row => (row["UNICEF Unit*"] || "Sector not reported") === sector),
+      sector,
+      countryName
+    )).join("");
+    const countryPeople = countryRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
+    const countryChildren = countryRows.reduce((sum,row) => sum + (Number(row["Children Reached"]) || 0),0);
+    const countryFunding = countryRows.reduce((sum,row) => sum + (Number(row["Funding Used (USD)"]) || 0),0);
+    const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people</span><span><strong>${fmtNum.format(countryChildren)}</strong> children</span><span><strong>${fmtUSD.format(countryFunding)}</strong> used</span></div></header>`;
+    return `<section class="sitrep-country-group">${countryHeading}<div class="sitrep-country-sectors">${sectors}</div></section>`;
   }).join("");
 
   $("sitrep-paper").innerHTML = `<header class="sitrep-masthead">
-      <div><p class="sitrep-kicker">PACIFIC EL NIÑO · SITUATION REPORT</p><h2>${escapeHtml(country)}</h2><p class="sitrep-period">Reporting period: ${period}</p></div>
+      <div><p class="sitrep-kicker">PACIFIC EL NIÑO · SITUATION REPORT</p><h2>${escapeHtml(reportTitle)}</h2><p class="sitrep-period">Reporting period: ${period}</p></div>
       <div class="sitrep-mark"><img src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Logo_of_UNICEF.svg" alt="UNICEF"><span>Generated ${fmtDate.format(new Date())}</span></div>
     </header>
     <section class="sitrep-figures" aria-label="Key figures">
@@ -394,10 +389,10 @@ const country = selectedCountry || "All countries";
       <div><strong>${fmtNum.format(active)}</strong><span>active / pending</span></div>
     </section>
     <section class="sitrep-overview"><div class="sitrep-section-title"><span>01</span><h3>Situation overview</h3></div>
-      ${latestUpdates.length ? `<ul>${latestUpdates.map(row => `<li><strong>${escapeHtml(row["Location / Admin Area"] || row["Country*"])}</strong> — ${escapeHtml(row["Result / Output"])} <span>(${fmtDate.format(new Date(row["Activity Date*"]))})</span></li>`).join("")}</ul>` : `<p>No result or output narrative has been recorded for the selected period.</p>`}
+      ${latestUpdates.length ? `<ul>${latestUpdates.map(row => `<li><strong>${escapeHtml(selectedCountry ? (row["Location / Admin Area"] || row["Country*"]) : row["Country*"])}</strong>${!selectedCountry && row["Location / Admin Area"] ? ` · ${escapeHtml(row["Location / Admin Area"])}` : ""} — ${escapeHtml(row["Result / Output"])} <span>(${fmtDate.format(new Date(row["Activity Date*"]))})</span></li>`).join("")}</ul>` : `<p>No result or output narrative has been recorded for the selected period.</p>`}
     </section>
-    <div class="sitrep-section-title response-title"><span>02</span><h3>Response by sector</h3></div>
-    <div class="sitrep-sector-list">${sectors}</div>
+    <div class="sitrep-section-title response-title"><span>02</span><h3>${selectedCountry ? "Response by sector" : "Response by country and sector"}</h3></div>
+    <div class="sitrep-country-list">${countrySections}</div>
     <footer class="sitrep-foot"><p><strong>Reporting note:</strong> This draft is synthesized from the UNICEF Activity Diary. Situation updates use Result / Output; interventions use What Was Done; gaps and priorities use Challenges and Next Step. Validate before external circulation.</p><p><strong>Data assurance:</strong> Latest submission ${latestSubmission} · ${evidence}/${rows.length} records include evidence links · Source: ${escapeHtml(metadata.source || (metadata.isDemo ? "Demonstration data" : "Activity Diary"))}</p></footer>`;
 }
 

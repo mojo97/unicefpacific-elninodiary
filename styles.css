@@ -162,8 +162,16 @@ tbody tr:hover { background: #f7fbfc; }
 .sitrep-overview li { padding-left: 12px; border-left: 3px solid #8cc5d9; color: #314a57; font-size: 12px; line-height: 1.5; }
 .sitrep-overview li span { color: #768992; white-space: nowrap; }
 .response-title { margin: 0 28px 11px; padding-top: 16px; border-top: 1px solid #dbe5e9; }
-.sitrep-sector-list { padding: 0 28px 20px; }
+.sitrep-country-list { padding: 0 28px 20px; }
+.sitrep-country-group { margin-bottom: 18px; }
+.sitrep-country-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 8px; padding: 12px 14px; color: var(--ocha-dark); border-left: 5px solid var(--ocha-red); background: #e8f2f6; break-after: avoid; }
+.sitrep-country-head > div:first-child > span { display: block; color: var(--ocha); font-size: 8px; font-weight: 800; letter-spacing: .15em; }
+.sitrep-country-head h3 { margin: 2px 0 0; font: 800 21px Manrope,sans-serif; }
+.sitrep-country-stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 18px; color: #4e6672; font-size: 10px; }
+.sitrep-country-stats strong { color: var(--ocha-dark); }
+.sitrep-country-sectors { display: grid; gap: 10px; }
 .sitrep-sector { margin-bottom: 12px; border: 1px solid #d5e0e5; break-inside: avoid; }
+.sitrep-country-sectors .sitrep-sector { margin-bottom: 0; }
 .sitrep-sector-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 9px 13px; color: #fff; background: var(--ocha-dark); }
 .sitrep-sector-head span { display: block; color: #a9d7e7; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
 .sitrep-sector-head h3 { margin: 1px 0 0; font: 800 15px Manrope,sans-serif; }
@@ -243,6 +251,8 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .sitrep-figures { grid-template-columns: repeat(2,1fr); }
   .sitrep-figures div { border-bottom: 1px solid #dbe5e9; }
   .sitrep-overview ul,.sitrep-sector-grid,.sitrep-foot { grid-template-columns: 1fr; }
+  .sitrep-country-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .sitrep-country-stats { justify-content: flex-start; }
   .sitrep-column { border-right: 0; border-bottom: 1px solid #dce6ea; }
   .sitrep-sector-head { align-items: flex-start; flex-direction: column; gap: 5px; }
   footer { flex-direction: column; }
@@ -276,7 +286,12 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .sitrep-section-title > span { width: 20px; height: 20px; font-size: 8px; }
   .sitrep-section-title h3 { font-size: 13px; }
   .response-title { margin: 0 16px 6px; padding-top: 7px; }
-  .sitrep-sector-list { padding: 0 16px 7px; }
+  .sitrep-country-list { padding: 0 16px 7px; }
+  .sitrep-country-group { margin-bottom: 8px; break-inside: auto; }
+  .sitrep-country-head { margin-bottom: 4px; padding: 5px 8px; border-left-width: 3px; }
+  .sitrep-country-head h3 { font-size: 12px; }
+  .sitrep-country-stats { gap: 3px 9px; font-size: 6.5px; }
+  .sitrep-country-sectors { gap: 4px; }
   .sitrep-sector { margin-bottom: 5px; }
   .sitrep-sector-head { padding: 4px 8px; }
   .sitrep-sector-head h3 { font-size: 10px; }
