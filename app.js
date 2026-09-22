@@ -388,12 +388,14 @@ function renderSitrep() {
     const nextSteps = uniqueNarratives(sectorRows,"Next Step",2);
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
+    const sectorChildren = sectorRows.reduce((sum,row) => sum + (Number(row["Children Reached"]) || 0),0);
+    const sectorReachMode = reachMode(sectorRows);
     return `<section class="sitrep-sector">
       <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"}</p></header>
       <div class="sitrep-sector-grid">
         <div class="sitrep-column sitrep-interventions"><h4>UNICEF interventions</h4>${interventionList(sectorRows)}</div>
         <div class="sitrep-column sitrep-partners"><h4>Partners</h4>${partners.length ? `<ul>${partners.map(partner => `<li>${escapeHtml(partner)}</li>`).join("")}</ul>` : `<p class="sitrep-not-reported">No partners reported.</p>`}</div>
-        <div class="sitrep-column sitrep-reach"><h4>Number of people reached / targeted</h4><strong class="sitrep-reach-number">${fmtNum.format(sectorPeople)}</strong><span class="sitrep-reach-label">People ${reachMode(sectorRows)}</span></div>
+        <div class="sitrep-column sitrep-reach"><h4>People & children reached / targeted</h4><div class="sitrep-reach-metric"><strong class="sitrep-reach-number">${fmtNum.format(sectorPeople)}</strong><span class="sitrep-reach-label">People ${sectorReachMode}</span></div><div class="sitrep-reach-metric"><strong class="sitrep-reach-number">${fmtNum.format(sectorChildren)}</strong><span class="sitrep-reach-label">Children ${sectorReachMode}</span></div></div>
         <div class="sitrep-column sitrep-gaps"><h4>Gaps & priority actions</h4>${narrativeList(challenges,"No gaps reported.")}<h5>Priority actions</h5>${narrativeList(nextSteps,"No next step reported.")}</div>
       </div>
     </section>`;

@@ -52,7 +52,7 @@ Funding labels follow the same rule. Planned or On Hold records show **Funding r
 |---|---|
 | UNICEF interventions | `Activity Title*` and `What Was Done?*` |
 | Partners | `Partners` |
-| Number of people reached / targeted | `People Reached (Total)`, labelled from `Implementation Status*` |
+| Number of people and children reached / targeted | `People Reached (Total)` and `Children Reached`, labelled from `Implementation Status*` |
 | Gaps & priority actions | `Challenges` and `Next Step` |
 | Key figures | Activities, People Reached, Children Reached, Funding Used and Implementation Status |
 | Context and assurance | Country, Location, Phase, Activity Date, Submission Date and Evidence Link |
