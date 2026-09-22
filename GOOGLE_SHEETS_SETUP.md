@@ -35,3 +35,5 @@ The dashboard has one data control: **Refresh**. It always fetches the latest sa
 | Missing-column message | Restore the exact workbook column headings |
 | Old data remain visible | Wait for Google to save, then select **Refresh** and hard-refresh the browser |
 | Live data unavailable | The live sheet could not be read; check sharing and the browser/network policy |
+
+The loader tolerates harmless heading differences such as `El Niño Phase*`, `El Nino Phase`, extra spaces, and missing asterisks. It still requires every reporting field to be present.

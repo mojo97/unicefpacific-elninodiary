@@ -31,6 +31,14 @@ const fmtUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "US
 const fmtDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const escapeHtml = (value) => String(value ?? "—").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const phaseColor = (phase) => PHASE_COLORS[phase] || "#91a6af";
+const canonicalHeader = value => String(value ?? "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/&/g, " and ")
+  .replace(/\*/g, "")
+  .replace(/[^a-z0-9]+/gi, " ")
+  .trim()
+  .toLowerCase();
 
 function excelDate(value) {
   if (!value && value !== 0) return "";
@@ -70,19 +78,22 @@ function parseExcelData(bytes, sourceDetails) {
   for (const sheetName of candidates) {
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
     const headerIndex = rows.findIndex(row => {
-      const labels = row.map(value => String(value ?? "").trim());
-      return labels.includes("Entry ID") && labels.includes("Activity Date*") && labels.includes("Activity Title*");
+      const labels = row.map(canonicalHeader);
+      return labels.includes("entry id") && labels.includes("activity date") && labels.includes("activity title");
     });
     if (headerIndex >= 0) { selected = { sheetName, rows, headerIndex }; break; }
   }
 
   if (!selected) throw new Error("No Activity Diary header row was found in this Excel file.");
   const headers = selected.rows[selected.headerIndex].map(value => String(value ?? "").trim());
-  const sourceHeader = field => [field,...(FIELD_ALIASES[field] || [])].find(candidate => headers.includes(candidate));
-  const missing = FIELD_ORDER.filter(field => !sourceHeader(field));
-  if (missing.length) throw new Error(`The Excel file is missing required column${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}`);
+  const sourceHeaderIndex = field => {
+    const accepted = [field,...(FIELD_ALIASES[field] || [])].map(canonicalHeader);
+    return headers.findIndex(header => accepted.includes(canonicalHeader(header)));
+  };
+  const missing = FIELD_ORDER.filter(field => sourceHeaderIndex(field) < 0);
+  if (missing.length) throw new Error(`The live sheet is missing required field${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}`);
 
-  const activities = selected.rows.slice(selected.headerIndex + 1).map(row => Object.fromEntries(FIELD_ORDER.map(field => [field,row[headers.indexOf(sourceHeader(field))]])))
+  const activities = selected.rows.slice(selected.headerIndex + 1).map(row => Object.fromEntries(FIELD_ORDER.map(field => [field,row[sourceHeaderIndex(field)]])))
     .filter(row => row["Activity Date*"] !== "" && row["Activity Date*"] !== null && row["Activity Title*"] !== "")
     .map(normalizeActivity);
   if (!activities.length) throw new Error(`The ${selected.sheetName} sheet contains no completed activity rows.`);
