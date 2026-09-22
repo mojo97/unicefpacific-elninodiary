@@ -44,6 +44,8 @@ Open **Situation report** in the navigation, then select one country or **All co
 
 The report masthead is titled **El Niño Situation Report**. When All countries is selected, the report uses a regional-overview subtitle and labels every sector row with its actual country name, for example **Fiji · UNICEF Sector**. It does not use “All countries” as a country name inside the report.
 
+Reach labels respond to implementation status. Records that are only Planned or On Hold are shown as **people/children targeted**. Records that are only Ongoing or Completed are shown as **people/children reached**. When both groups are present, the label becomes **reached / targeted** and the card notes that reported and planned reach are combined.
+
 | Situation report section | Activity Diary source |
 |---|---|
 | Situation overview / sector situation update | `Result / Output` (falling back to Activity Title only when no result is entered) |

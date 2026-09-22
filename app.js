@@ -222,14 +222,32 @@ function applyFilters() {
 }
 
 function sum(field) { return filteredActivities.reduce((total,d) => total + (Number(d[field]) || 0), 0); }
+function reachMode(rows) {
+  const normalizeStatus = value => String(value || "").trim().toLowerCase().replace(/[\s_-]+/g," ");
+  const selectedStatus = normalizeStatus($("status-filter")?.value);
+  if (selectedStatus === "planned" || selectedStatus === "on hold") return "targeted";
+  if (selectedStatus === "ongoing" || selectedStatus === "completed") return "reached";
+  const statuses = rows.map(row => normalizeStatus(row["Implementation Status*"])).filter(Boolean);
+  if (!statuses.length) return "reached";
+  const targetOnly = statuses.every(status => status.includes("planned") || status.includes("hold"));
+  const deliveredOnly = statuses.every(status => status.includes("ongoing") || status.includes("completed"));
+  return targetOnly ? "targeted" : (deliveredOnly ? "reached" : "reached / targeted");
+}
+function reachFoot(rows) {
+  const mode = reachMode(rows);
+  if (mode === "targeted") return "Planned reach reported";
+  if (mode === "reached") return "Reported reach to date";
+  return "Reported and planned reach combined";
+}
 function renderKpis() {
   const countries = new Set(filteredActivities.map(d => d["Country*"])).size;
   const completed = filteredActivities.filter(d => d["Implementation Status*"] === "Completed").length;
   const completion = filteredActivities.length ? Math.round(completed / filteredActivities.length * 100) : 0;
+  const mode = reachMode(filteredActivities);
   const cards = [
     ["Activities", fmtNum.format(filteredActivities.length), `${countries} locations represented`, true],
-    ["People reached", fmtNum.format(sum("People Reached (Total)")), "Direct reach reported"],
-    ["Children reached", fmtNum.format(sum("Children Reached")), "Included in total reach"],
+    [`People ${mode}`, fmtNum.format(sum("People Reached (Total)")), reachFoot(filteredActivities)],
+    [`Children ${mode}`, fmtNum.format(sum("Children Reached")), reachFoot(filteredActivities)],
     ["Funding used", fmtUSD.format(sum("Funding Used (USD)")), "Reported expenditure"],
     ["Completed", `${completion}%`, `${completed} of ${filteredActivities.length} activities`]
   ];
@@ -353,7 +371,7 @@ function renderSitrep() {
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     return `<section class="sitrep-sector">
-      <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people reached</p></header>
+      <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people ${reachMode(sectorRows)}</p></header>
       <div class="sitrep-sector-grid">
         <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || countryName)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
         <div class="sitrep-column"><h4>UNICEF interventions</h4>${narrativeList(interventions,"No intervention narrative reported.")}<small>${partners.length ? `Partners: ${escapeHtml(partners.slice(0,4).join(", "))}` : "Partners not reported"}</small></div>
@@ -373,7 +391,8 @@ function renderSitrep() {
     const countryPeople = countryRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     const countryChildren = countryRows.reduce((sum,row) => sum + (Number(row["Children Reached"]) || 0),0);
     const countryFunding = countryRows.reduce((sum,row) => sum + (Number(row["Funding Used (USD)"]) || 0),0);
-    const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people</span><span><strong>${fmtNum.format(countryChildren)}</strong> children</span><span><strong>${fmtUSD.format(countryFunding)}</strong> used</span></div></header>`;
+    const countryReachMode = reachMode(countryRows);
+    const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people ${countryReachMode}</span><span><strong>${fmtNum.format(countryChildren)}</strong> children ${countryReachMode}</span><span><strong>${fmtUSD.format(countryFunding)}</strong> used</span></div></header>`;
     return `<section class="sitrep-country-group">${countryHeading}<div class="sitrep-country-sectors">${sectors}</div></section>`;
   }).join("");
 
@@ -384,8 +403,8 @@ function renderSitrep() {
     </header>
     <section class="sitrep-figures" aria-label="Key figures">
       <div><strong>${fmtNum.format(rows.length)}</strong><span>reported activities</span></div>
-      <div><strong>${fmtNum.format(total("People Reached (Total)"))}</strong><span>people reached</span></div>
-      <div><strong>${fmtNum.format(total("Children Reached"))}</strong><span>children reached</span></div>
+      <div><strong>${fmtNum.format(total("People Reached (Total)"))}</strong><span>people ${reachMode(rows)}</span></div>
+      <div><strong>${fmtNum.format(total("Children Reached"))}</strong><span>children ${reachMode(rows)}</span></div>
       <div><strong>${fmtUSD.format(total("Funding Used (USD)"))}</strong><span>funding used</span></div>
       <div><strong>${fmtNum.format(active)}</strong><span>active / pending</span></div>
     </section>
@@ -406,7 +425,7 @@ function openDetail(entryId) {
   const evidence = metadata.isDemo ? escapeHtml(d["Evidence Link"] || "Not reported") + " (illustrative link)" : (/^https?:\/\//.test(d["Evidence Link"]) ? `<a class="detail-link" href="${escapeHtml(d["Evidence Link"])}" target="_blank" rel="noopener">Open supporting evidence ↗</a>` : "Not reported");
   $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
     <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF Unit*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
-    <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem("People reached",d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem("Children reached",d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem("Funding used",d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
+    <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem(`People ${reachMode([d])}`,d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem(`Children ${reachMode([d])}`,d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem("Funding used",d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
     <section class="detail-group full"><h3>Activity narrative</h3><div class="detail-grid">${detailItem("Activity title",d["Activity Title*"],true)}${detailItem("What was done?",d["What Was Done?*"],true)}</div></section>
     <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,v=>fmtDate.format(new Date(v)))}</div></section>
   </div>`;
