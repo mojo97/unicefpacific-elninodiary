@@ -176,7 +176,7 @@ tbody tr:hover { background: #f7fbfc; }
 .sitrep-sector-head span { display: block; color: #a9d7e7; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
 .sitrep-sector-head h3 { margin: 1px 0 0; font: 800 15px Manrope,sans-serif; }
 .sitrep-sector-head p { margin: 0; color: #d3e9f0; font-size: 10px; }
-.sitrep-sector-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+.sitrep-sector-grid { display: grid; grid-template-columns: minmax(0,2.15fr) minmax(130px,1fr) minmax(145px,.9fr) minmax(0,1.7fr); }
 .sitrep-column { min-width: 0; padding: 12px 13px; border-right: 1px solid #dce6ea; }
 .sitrep-column:last-child { border-right: 0; }
 .sitrep-column h4 { margin: 0 0 8px; color: var(--ocha); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
@@ -186,6 +186,17 @@ tbody tr:hover { background: #f7fbfc; }
 .sitrep-column ul { margin: 0; padding-left: 16px; }
 .sitrep-column li + li { margin-top: 4px; }
 .sitrep-column small { display: block; margin-top: 8px; color: #71858e; font-size: 9px; line-height: 1.4; }
+.sitrep-intervention-list { padding: 0 !important; list-style: none; }
+.sitrep-intervention-list li { padding-bottom: 8px; border-bottom: 1px solid #e3ebee; }
+.sitrep-intervention-list li:last-child { padding-bottom: 0; border-bottom: 0; }
+.sitrep-intervention-list strong,.sitrep-intervention-list span { display: block; }
+.sitrep-intervention-list strong { margin-bottom: 3px; color: var(--ocha-dark); }
+.sitrep-intervention-list small { margin-top: 3px; }
+.sitrep-more { margin-top: 8px !important; color: #71858e !important; font-style: italic; }
+.sitrep-partners ul { padding-left: 15px; }
+.sitrep-reach { display: flex; flex-direction: column; align-items: flex-start; }
+.sitrep-reach-number { color: var(--ocha-dark); font: 800 30px Manrope,sans-serif; line-height: 1; }
+.sitrep-reach-label { margin-top: 6px; color: #526b76; font-size: 10px; font-weight: 700; text-transform: capitalize; }
 .sitrep-gaps { background: #fff9f7; }
 .sitrep-not-reported { color: #809098 !important; font-style: italic; }
 .sitrep-foot { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; padding: 12px 28px; color: #5d717b; background: #edf3f5; font-size: 9px; line-height: 1.45; }
@@ -302,5 +313,7 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .sitrep-column p,.sitrep-column li { font-size: 7px; line-height: 1.25; }
   .sitrep-column li + li { margin-top: 2px; }
   .sitrep-column small { margin-top: 3px; font-size: 6.5px; }
+  .sitrep-reach-number { font-size: 18px; }
+  .sitrep-reach-label { margin-top: 3px; font-size: 7px; }
   .sitrep-foot { padding: 6px 16px; font-size: 6.5px; }
 }

@@ -40,20 +40,22 @@ Every workbook field is used:
 
 ## Country Situation Report
 
-Open **Situation report** in the navigation, then select one country or **All countries**. An individual-country report is grouped by UNICEF Sector. The All countries report keeps every country separate and then groups its activities by UNICEF Sector, using the hierarchy **Country → UNICEF Sector → situation, interventions, gaps and priority actions**.
+Open **Situation report** in the navigation, then select one country or **All countries**. An individual-country report is grouped by UNICEF Sector. The All countries report keeps every country separate and then groups its activities by UNICEF Sector, using the hierarchy **Country → UNICEF Sector → interventions, partners, people reached/targeted, gaps and priority actions**.
 
 The report masthead is titled **El Niño Situation Report**. When All countries is selected, the report uses a regional-overview subtitle and labels every sector row with its actual country name, for example **Fiji · UNICEF Sector**. It does not use “All countries” as a country name inside the report.
 
 Reach labels respond to implementation status. Records that are only Planned or On Hold are shown as **people/children targeted**. Records that are only Ongoing or Completed are shown as **people/children reached**. When both groups are present, the label becomes **reached / targeted** and the card notes that reported and planned reach are combined.
 
+Funding labels follow the same rule. Planned or On Hold records show **Funding required**; Ongoing or Completed records show **Funding used**; and a mixed selection shows **Funding used / required**.
+
 | Situation report section | Activity Diary source |
 |---|---|
-| Situation overview / sector situation update | `Result / Output` (falling back to Activity Title only when no result is entered) |
-| UNICEF interventions | `What Was Done?*` |
-| Gaps | `Challenges` |
-| Priority actions | `Next Step` |
+| UNICEF interventions | `Activity Title*` and `What Was Done?*` |
+| Partners | `Partners` |
+| Number of people reached / targeted | `People Reached (Total)`, labelled from `Implementation Status*` |
+| Gaps & priority actions | `Challenges` and `Next Step` |
 | Key figures | Activities, People Reached, Children Reached, Funding Used and Implementation Status |
-| Context and assurance | Country, Location, Phase, Activity Date, Submission Date, Partners and Evidence Link |
+| Context and assurance | Country, Location, Phase, Activity Date, Submission Date and Evidence Link |
 
 The country selector is specific to the report and begins with **All countries**. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
 

@@ -239,6 +239,16 @@ function reachFoot(rows) {
   if (mode === "reached") return "Reported reach to date";
   return "Reported and planned reach combined";
 }
+function fundingMode(rows) {
+  const reach = reachMode(rows);
+  return reach === "targeted" ? "required" : (reach === "reached" ? "used" : "used / required");
+}
+function fundingFoot(rows) {
+  const mode = fundingMode(rows);
+  if (mode === "required") return "Planned funding requirement";
+  if (mode === "used") return "Reported expenditure";
+  return "Reported and required funding combined";
+}
 function renderKpis() {
   const countries = new Set(filteredActivities.map(d => d["Country*"])).size;
   const completed = filteredActivities.filter(d => d["Implementation Status*"] === "Completed").length;
@@ -248,7 +258,7 @@ function renderKpis() {
     ["Activities", fmtNum.format(filteredActivities.length), `${countries} locations represented`, true],
     [`People ${mode}`, fmtNum.format(sum("People Reached (Total)")), reachFoot(filteredActivities)],
     [`Children ${mode}`, fmtNum.format(sum("Children Reached")), reachFoot(filteredActivities)],
-    ["Funding used", fmtUSD.format(sum("Funding Used (USD)")), "Reported expenditure"],
+    [`Funding ${fundingMode(filteredActivities)}`, fmtUSD.format(sum("Funding Used (USD)")), fundingFoot(filteredActivities)],
     ["Completed", `${completion}%`, `${completed} of ${filteredActivities.length} activities`]
   ];
   $("kpi-grid").innerHTML = cards.map(([label,value,foot,highlight]) => `<article class="kpi-card ${highlight ? "highlight" : ""}"><span class="kpi-label">${label}</span><strong class="kpi-value">${value}</strong><span class="kpi-foot">${foot}</span></article>`).join("");
@@ -343,6 +353,18 @@ function narrativeList(items, emptyText) {
   return items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="sitrep-not-reported">${escapeHtml(emptyText)}</p>`;
 }
 
+function interventionList(rows, limit = 3) {
+  const items = rows.slice(0, limit).map(row => {
+    const title = String(row["Activity Title*"] || "Intervention not titled").trim();
+    const description = String(row["What Was Done?*"] || "No intervention details reported.").trim();
+    const date = new Date(row["Activity Date*"]);
+    const dateLabel = Number.isNaN(date.getTime()) ? "Date not reported" : fmtDate.format(date);
+    return `<li><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span><small>${dateLabel} · ${escapeHtml(row["Implementation Status*"] || "Status not reported")}</small></li>`;
+  });
+  const remainder = rows.length - items.length;
+  return `<ul class="sitrep-intervention-list">${items.join("")}</ul>${remainder > 0 ? `<p class="sitrep-more">+${fmtNum.format(remainder)} additional ${remainder === 1 ? "activity" : "activities"} included in totals.</p>` : ""}`;
+}
+
 function renderSitrep() {
   const rows = sitrepFilterRows().sort((a,b) => new Date(b["Activity Date*"]) - new Date(a["Activity Date*"]));
   const selectedCountry = $("sitrep-country").value;
@@ -359,22 +381,19 @@ function renderSitrep() {
   const latestSubmission = submissions.length ? fmtDate.format(new Date(Math.max(...submissions))) : "Not recorded";
   const active = rows.filter(row => row["Implementation Status*"] !== "Completed").length;
   const evidence = rows.filter(row => /^https?:\/\//.test(row["Evidence Link"])).length;
-  const latestUpdates = rows.filter(row => row["Result / Output"]).slice(0, 3);
   const countryNames = selectedCountry ? [selectedCountry] : [...new Set(rows.map(row => row["Country*"] || "Country not reported"))].sort();
 
   const renderSector = (sectorRows, sector, countryName) => {
-    const latest = sectorRows[0];
-    const situation = latest["Result / Output"] || latest["Activity Title*"] || "No situation update reported.";
-    const interventions = uniqueNarratives(sectorRows,"What Was Done?*",2);
     const challenges = uniqueNarratives(sectorRows,"Challenges",2);
     const nextSteps = uniqueNarratives(sectorRows,"Next Step",2);
     const partners = [...new Set(sectorRows.flatMap(row => String(row["Partners"] || "").split(/[,;]/)).map(value => value.trim()).filter(Boolean))];
     const sectorPeople = sectorRows.reduce((sum,row) => sum + (Number(row["People Reached (Total)"]) || 0),0);
     return `<section class="sitrep-sector">
-      <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"} · ${fmtNum.format(sectorPeople)} people ${reachMode(sectorRows)}</p></header>
+      <header class="sitrep-sector-head"><div><span>${escapeHtml(countryName)} · UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><p>${sectorRows.length} ${sectorRows.length === 1 ? "activity" : "activities"}</p></header>
       <div class="sitrep-sector-grid">
-        <div class="sitrep-column"><h4>Situation update</h4><p>${escapeHtml(situation)}</p><small>${escapeHtml(latest["Location / Admin Area"] || countryName)} · ${escapeHtml(latest["El Niño Phase*"])} · ${fmtDate.format(new Date(latest["Activity Date*"]))}</small></div>
-        <div class="sitrep-column"><h4>UNICEF interventions</h4>${narrativeList(interventions,"No intervention narrative reported.")}<small>${partners.length ? `Partners: ${escapeHtml(partners.slice(0,4).join(", "))}` : "Partners not reported"}</small></div>
+        <div class="sitrep-column sitrep-interventions"><h4>UNICEF interventions</h4>${interventionList(sectorRows)}</div>
+        <div class="sitrep-column sitrep-partners"><h4>Partners</h4>${partners.length ? `<ul>${partners.map(partner => `<li>${escapeHtml(partner)}</li>`).join("")}</ul>` : `<p class="sitrep-not-reported">No partners reported.</p>`}</div>
+        <div class="sitrep-column sitrep-reach"><h4>Number of people reached / targeted</h4><strong class="sitrep-reach-number">${fmtNum.format(sectorPeople)}</strong><span class="sitrep-reach-label">People ${reachMode(sectorRows)}</span></div>
         <div class="sitrep-column sitrep-gaps"><h4>Gaps & priority actions</h4>${narrativeList(challenges,"No gaps reported.")}<h5>Priority actions</h5>${narrativeList(nextSteps,"No next step reported.")}</div>
       </div>
     </section>`;
@@ -392,7 +411,7 @@ function renderSitrep() {
     const countryChildren = countryRows.reduce((sum,row) => sum + (Number(row["Children Reached"]) || 0),0);
     const countryFunding = countryRows.reduce((sum,row) => sum + (Number(row["Funding Used (USD)"]) || 0),0);
     const countryReachMode = reachMode(countryRows);
-    const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people ${countryReachMode}</span><span><strong>${fmtNum.format(countryChildren)}</strong> children ${countryReachMode}</span><span><strong>${fmtUSD.format(countryFunding)}</strong> used</span></div></header>`;
+    const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people ${countryReachMode}</span><span><strong>${fmtNum.format(countryChildren)}</strong> children ${countryReachMode}</span><span><strong>${fmtUSD.format(countryFunding)}</strong> ${fundingMode(countryRows)}</span></div></header>`;
     return `<section class="sitrep-country-group">${countryHeading}<div class="sitrep-country-sectors">${sectors}</div></section>`;
   }).join("");
 
@@ -405,15 +424,12 @@ function renderSitrep() {
       <div><strong>${fmtNum.format(rows.length)}</strong><span>reported activities</span></div>
       <div><strong>${fmtNum.format(total("People Reached (Total)"))}</strong><span>people ${reachMode(rows)}</span></div>
       <div><strong>${fmtNum.format(total("Children Reached"))}</strong><span>children ${reachMode(rows)}</span></div>
-      <div><strong>${fmtUSD.format(total("Funding Used (USD)"))}</strong><span>funding used</span></div>
+      <div><strong>${fmtUSD.format(total("Funding Used (USD)"))}</strong><span>funding ${fundingMode(rows)}</span></div>
       <div><strong>${fmtNum.format(active)}</strong><span>active / pending</span></div>
     </section>
-    <section class="sitrep-overview"><div class="sitrep-section-title"><span>01</span><h3>Situation overview</h3></div>
-      ${latestUpdates.length ? `<ul>${latestUpdates.map(row => `<li><strong>${escapeHtml(selectedCountry ? (row["Location / Admin Area"] || row["Country*"]) : row["Country*"])}</strong>${!selectedCountry && row["Location / Admin Area"] ? ` · ${escapeHtml(row["Location / Admin Area"])}` : ""} — ${escapeHtml(row["Result / Output"])} <span>(${fmtDate.format(new Date(row["Activity Date*"]))})</span></li>`).join("")}</ul>` : `<p>No result or output narrative has been recorded for the selected period.</p>`}
-    </section>
-    <div class="sitrep-section-title response-title"><span>02</span><h3>${selectedCountry ? "Response by sector" : "Response by country and sector"}</h3></div>
+    <div class="sitrep-section-title response-title"><span>01</span><h3>${selectedCountry ? "UNICEF response by sector" : "UNICEF response by country and sector"}</h3></div>
     <div class="sitrep-country-list">${countrySections}</div>
-    <footer class="sitrep-foot"><p><strong>Reporting note:</strong> This draft is synthesized from the UNICEF Activity Diary. Situation updates use Result / Output; interventions use What Was Done; gaps and priorities use Challenges and Next Step. Validate before external circulation.</p><p><strong>Data assurance:</strong> Latest submission ${latestSubmission} · ${evidence}/${rows.length} records include evidence links · Source: ${escapeHtml(metadata.source || (metadata.isDemo ? "Demonstration data" : "Activity Diary"))}</p></footer>`;
+    <footer class="sitrep-foot"><p><strong>Reporting note:</strong> UNICEF interventions use Activity Title and What Was Done; partners use Partners; reach uses People Reached (Total) and is labelled from Implementation Status; gaps and priority actions use Challenges and Next Step. Validate before external circulation.</p><p><strong>Data assurance:</strong> Latest submission ${latestSubmission} · ${evidence}/${rows.length} records include evidence links · Source: ${escapeHtml(metadata.source || (metadata.isDemo ? "Demonstration data" : "Activity Diary"))}</p></footer>`;
 }
 
 function detailItem(label, value, full = false, format) {
@@ -425,7 +441,7 @@ function openDetail(entryId) {
   const evidence = metadata.isDemo ? escapeHtml(d["Evidence Link"] || "Not reported") + " (illustrative link)" : (/^https?:\/\//.test(d["Evidence Link"]) ? `<a class="detail-link" href="${escapeHtml(d["Evidence Link"])}" target="_blank" rel="noopener">Open supporting evidence ↗</a>` : "Not reported");
   $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
     <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF Unit*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
-    <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem(`People ${reachMode([d])}`,d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem(`Children ${reachMode([d])}`,d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem("Funding used",d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
+    <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem(`People ${reachMode([d])}`,d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem(`Children ${reachMode([d])}`,d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem(`Funding ${fundingMode([d])}`,d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
     <section class="detail-group full"><h3>Activity narrative</h3><div class="detail-grid">${detailItem("Activity title",d["Activity Title*"],true)}${detailItem("What was done?",d["What Was Done?*"],true)}</div></section>
     <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,v=>fmtDate.format(new Date(v)))}</div></section>
   </div>`;
