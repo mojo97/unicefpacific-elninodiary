@@ -1,17 +1,9 @@
-/* Data connection settings. See SHAREPOINT_SETUP.md before enabling live mode. */
+/* Live data connection. See GOOGLE_SHEETS_SETUP.md for sharing and update steps. */
 window.DIARY_CONFIG = {
-  mode: "graph",
+  mode: "google-sheets",
   refreshMinutes: 5,
-  sharePoint: {
-    tenantId: "YOUR_TENANT_ID",
-    clientId: "YOUR_ENTRA_APP_CLIENT_ID",
-    hostname: "unicef.sharepoint.com",
-    sitePath: "/teams/FJI-Program",
-    libraryName: "Emergency",
-    filePath: "/2026 El Niño/UNICEF_El_Nino_Activity_Diary_Reporting_Template_v1.xlsx",
-    siteId: "",
-    driveId: "",
-    itemId: "",
-    tableName: "ElNinoActivityDiary"
+  googleSheets: {
+    dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&sheet=Activity%20Diary",
+    displayName: "UNICEF El Niño Activity Diary"
   }
 };

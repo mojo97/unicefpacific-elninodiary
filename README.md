@@ -92,7 +92,7 @@ Because browsers block some local-file data loading, use a tiny local web server
 4. Choose **Public** only if UNICEF has approved making the site code public. The included demonstration data are illustrative; never put confidential workbook data in `data/activities.json`.
 5. Select **Create repository**.
 6. Choose **Add file → Upload files**.
-7. Upload the *contents* of this folder—`index.html`, `app.js`, `styles.css`, `config.js`, `README.md`, `SHAREPOINT_SETUP.md`, and the `data` folder—not a parent folder around them.
+7. Upload the *contents* of this folder—`index.html`, `app.js`, `styles.css`, `config.js`, `README.md`, `GOOGLE_SHEETS_SETUP.md`, and the `data` folder—not a parent folder around them.
 8. Commit the files to the `main` branch.
 9. In the repository, open **Settings → Pages**.
 10. Under **Build and deployment**, choose **Deploy from a branch**.
@@ -101,69 +101,19 @@ Because browsers block some local-file data loading, use a tiny local web server
 
     `https://YOUR-GITHUB-NAME.github.io/unicef-el-nino-diary/`
 
-At this point the site runs in demonstration mode.
+At this point the site reads the configured live Google Sheet.
 
-## Load an Excel file manually — without SharePoint
+## Part 3 — Live Google Sheet
 
-Use this option when the workbook is on your computer, attached to an email, stored outside SharePoint, or when the Microsoft 365 connection has not been configured.
-
-1. Open the published dashboard or the local preview.
-2. Select **Load Excel** in the top-right corner.
-3. Select an `.xlsx`, `.xlsm`, or `.xls` file from your computer.
-4. Select **Open**.
-5. Wait for the confirmation message showing how many activities were loaded.
-6. Confirm that the source indicator in the header changes to `Excel · filename.xlsx`.
-7. Review the activity count and one record before using the analysis.
-
-The dashboard first looks for a sheet named **Activity Diary**. It finds the header row automatically, verifies that all 21 required columns are present, ignores blank template rows, and then rebuilds every chart, map, timeline, filter and table.
-
-Important details:
-
-- The selected Excel file is processed inside your browser and is not sent to GitHub or stored by the website.
-- The file must retain the original 21 column headings.
-- The Activity Diary sheet must contain at least one row with an Activity Date and Activity Title.
-- Selecting **Refresh** re-reads the currently selected file.
-- If you close or reload the webpage, select **Load Excel** again. Browsers do not allow the page to remember access to a local file permanently.
-- This manual method shows the latest information at the moment you select the file. It does not automatically detect later changes made to the Excel file; load the saved file again after editing it.
-- For automatic five-minute refresh from a shared source, use the SharePoint/Microsoft Graph setup below.
-
-## Choose between Excel and SharePoint
-
-Both source options remain available in the dashboard header:
-
-| Button | Result |
-|---|---|
-| **Load Excel** | Selects a workbook from the user's computer and immediately uses it for every dashboard view. |
-| **Use SharePoint** | Stops using the local workbook and switches to the live SharePoint workbook after Microsoft sign-in. |
-| **Refresh** | Re-reads whichever source is currently active. |
-
-The source badge beside the buttons always identifies the active source as **Excel · filename**, **Live from SharePoint**, or **Demonstration data**. If the SharePoint connection fails while an Excel file is active, the dashboard continues using that Excel file rather than clearing the analysis.
-
-## Part 3 — Connect the real SharePoint workbook
-
-A private SharePoint file link cannot be read anonymously by a public webpage. The dashboard uses Microsoft sign-in and Microsoft Graph. It is already configured to locate this workbook path:
+The dashboard is already configured to read this workbook:
 
 ```text
-SharePoint site: /teams/FJI-Program
-Document library: Emergency
-Folder: /2026 El Niño
-File: UNICEF_El_Nino_Activity_Diary_Reporting_Template_v1.xlsx
+https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/edit
 ```
 
-Ask your UNICEF Microsoft 365/Entra administrator to help with the one-time setup in [SHAREPOINT_SETUP.md](SHAREPOINT_SETUP.md).
+Set the Google Sheet's General access to **Anyone with the link — Viewer**. The dashboard downloads the current workbook, reads the **Activity Diary** sheet, and refreshes every five minutes or whenever **Refresh** is selected. See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md).
 
-After the administrator gives you the Tenant ID and App/Client ID:
-
-1. Open `config.js` in GitHub.
-2. Select the pencil icon to edit.
-3. Change `mode: "local"` to `mode: "graph"`.
-4. Replace `YOUR_TENANT_ID` and `YOUR_ENTRA_APP_CLIENT_ID` with the administrator-provided values.
-5. Keep the preconfigured SharePoint path unchanged unless the workbook is moved or renamed.
-6. Commit the change.
-7. Open the GitHub Pages site and select **Connect Microsoft 365**.
-8. Sign in with a UNICEF account that already has permission to the workbook.
-
-The dashboard securely downloads the latest workbook for the signed-in user, reads the **Activity Diary** sheet in the browser, and refreshes every five minutes or whenever **Refresh** is selected. It does not copy the live workbook into the GitHub repository.
+Important: link-accessible Google Sheets are not suitable for confidential or personally identifiable data. Use an authenticated internal application if UNICEF policy requires restricted access.
 
 The site displays **UNICEF Sector** throughout. Keep the workbook header `UNICEF Unit*` unchanged because the template instructs users to preserve column names. The Excel loader also accepts `UNICEF Sector*`, `UNICEF Sectors*`, or `UNICEF Unit / Sector*` if a future workbook version uses one of those headings.
 
@@ -177,11 +127,11 @@ The site displays **UNICEF Sector** throughout. Keep the workbook header `UNICEF
 6. Make the web part wide or full-width if that layout is available.
 7. Publish or republish the SharePoint page.
 
-If SharePoint blocks the URL, ask the site administrator to allow your `github.io` domain in SharePoint HTML Field Security. Users may also need to allow the Microsoft sign-in pop-up. If your organisation prohibits public GitHub Pages or custom browser applications, deploy the same interface as a SharePoint Framework web part instead.
+If SharePoint blocks the embedded URL, ask the site administrator to allow your `github.io` domain in SharePoint HTML Field Security. The dashboard itself no longer uses SharePoint for data.
 
 ## Regular reporting workflow
 
-1. Staff update approved rows in the SharePoint-hosted Excel table.
+1. Staff update approved rows in the shared Google Sheet.
 2. Keep one activity per row and retain the exact headers.
 3. The dashboard reads the saved table after its next refresh.
 4. Users can filter by UNICEF sector, country, phase, status, date-related text, partners, results, challenges, next steps, focal point, and any other field through search.
@@ -191,15 +141,14 @@ If SharePoint blocks the URL, ask the site administrator to allow your `github.i
 
 - `index.html` — page structure
 - `styles.css` — responsive UNICEF-inspired visual design
-- `app.js` — analysis, timeline, map, filters, detail view, and Graph sync
+- `app.js` — analysis, timeline, map, filters, detail view, and Google Sheets sync
 - `config.js` — connection settings
 - `data/activities.json` — clearly labelled demonstration data only
-- `SHAREPOINT_SETUP.md` — administrator setup and security notes
+- `GOOGLE_SHEETS_SETUP.md` — live-source setup, update steps and security notes
 
 ## Support and safety
 
-- The live connection is read-only.
-- Workbook access continues to be controlled by Microsoft 365 permissions.
-- Do not add a client secret to `config.js`; browser apps must not contain secrets.
+- The dashboard's live connection is read-only; editors change data directly in Google Sheets.
+- Anyone who can access the public dashboard may be able to retrieve the link-accessible source workbook.
 - Do not publish personal, sensitive, or programme-confidential content without UNICEF approval.
 - Review evidence URLs and personal information before enabling a public-facing deployment.

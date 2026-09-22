@@ -23,7 +23,7 @@ const COUNTRY_COORDS = {
 
 const PHASE_COLORS = { "Preparedness": "#38bdf8", "Anticipatory Action": "#f7bf45", "Response": "#ef6f61", "Recovery": "#43b982" };
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
-let allActivities = [], filteredActivities = [], metadata = { isDemo: true }, map, markerLayer, msalClient, uploadedWorkbookFile;
+let allActivities = [], filteredActivities = [], metadata = { isDemo: true }, map, markerLayer;
 
 const $ = (id) => document.getElementById(id);
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -91,10 +91,6 @@ function parseExcelData(bytes, sourceDetails) {
   return activities;
 }
 
-async function loadExcelData(file) {
-  return parseExcelData(await file.arrayBuffer(), { source: "Uploaded Excel", fileName: file.name });
-}
-
 async function loadLocalData() {
   const response = await fetch("data/activities.json", { cache: "no-store" });
   if (!response.ok) throw new Error("The demonstration data file could not be loaded.");
@@ -103,89 +99,41 @@ async function loadLocalData() {
   return payload.activities.map(normalizeActivity);
 }
 
-async function initialiseMicrosoft() {
-  if (!window.msal) throw new Error("Microsoft sign-in library did not load.");
-  const sp = config.sharePoint || {};
-  const hasIds = ["siteId", "driveId", "itemId"].every(k => sp[k] && !String(sp[k]).startsWith("YOUR_"));
-  const hasPath = ["hostname", "sitePath", "libraryName", "filePath"].every(k => sp[k]);
-  const missing = ["tenantId", "clientId"].some(k => !sp[k] || String(sp[k]).startsWith("YOUR_")) || (!hasIds && !hasPath);
-  if (missing) throw new Error("SharePoint live mode is not configured yet. Complete config.js first.");
-  if (!msalClient) {
-    msalClient = new msal.PublicClientApplication({
-      auth: { clientId: sp.clientId, authority: `https://login.microsoftonline.com/${sp.tenantId}`, redirectUri: window.location.origin + window.location.pathname },
-      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
-    });
-    if (msalClient.initialize) await msalClient.initialize();
-  }
+async function loadGoogleSheetsData() {
+  const url = String(config.googleSheets?.dataUrl || config.googleSheets?.workbookUrl || "").trim();
+  if (!url) throw new Error("The Google Sheet link is not configured.");
+  const separator = url.includes("?") ? "&" : "?";
+  const response = await fetch(`${url}${separator}_=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Google Sheets returned ${response.status}. Confirm that the sheet is shared with anyone who has the link.`);
+  return parseExcelData(await response.arrayBuffer(), { source: "Google Sheets", fileName: config.googleSheets?.displayName || "El Niño Activity Diary" });
 }
 
-const graphPath = value => "/" + String(value || "").split("/").filter(Boolean).map(encodeURIComponent).join("/");
-async function graphFetchJson(url, accessToken) {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
-  if (!response.ok) throw new Error(`Microsoft Graph returned ${response.status} while locating the SharePoint workbook.`);
-  return response.json();
-}
-
-async function resolveSharePointWorkbook(accessToken) {
-  const sp = config.sharePoint;
-  const hasIds = ["siteId", "driveId", "itemId"].every(k => sp[k] && !String(sp[k]).startsWith("YOUR_"));
-  if (hasIds) return { driveId: sp.driveId, itemId: sp.itemId, name: "UNICEF El Niño Activity Diary" };
-
-  const site = await graphFetchJson(`https://graph.microsoft.com/v1.0/sites/${encodeURIComponent(sp.hostname)}:${graphPath(sp.sitePath)}`, accessToken);
-  const drives = await graphFetchJson(`https://graph.microsoft.com/v1.0/sites/${encodeURIComponent(site.id)}/drives`, accessToken);
-  const libraryName = String(sp.libraryName).toLowerCase();
-  const drive = (drives.value || []).find(item => String(item.name).toLowerCase() === libraryName)
-    || (drives.value || []).find(item => item.webUrl && decodeURIComponent(new URL(item.webUrl).pathname).toLowerCase().endsWith(`/${libraryName}`));
-  if (!drive) throw new Error(`The SharePoint document library “${sp.libraryName}” was not found.`);
-
-  const item = await graphFetchJson(`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(drive.id)}/root:${graphPath(sp.filePath)}`, accessToken);
-  return { driveId: drive.id, itemId: item.id, name: item.name };
-}
-
-async function loadGraphData(interactive = false) {
-  await initialiseMicrosoft();
-  let account = msalClient.getAllAccounts()[0];
-  const scopes = ["Files.Read.All", "Sites.Read.All"];
-  if (!account && interactive) {
-    const login = await msalClient.loginPopup({ scopes, prompt: "select_account" });
-    account = login.account;
-  }
-  if (!account) throw new Error("Select Connect SharePoint to load the private workbook.");
-  let token;
-  try { token = await msalClient.acquireTokenSilent({ scopes, account }); }
-  catch (error) {
-    if (!interactive) throw error;
-    token = await msalClient.acquireTokenPopup({ scopes, account });
-  }
-  const sp = config.sharePoint;
-  const item = await resolveSharePointWorkbook(token.accessToken);
-  const response = await fetch(`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(item.driveId)}/items/${encodeURIComponent(item.itemId)}/content`, { headers: { Authorization: `Bearer ${token.accessToken}` }, cache: "no-store" });
-  if (!response.ok) throw new Error(`Microsoft Graph returned ${response.status} while reading the SharePoint workbook.`);
-  return parseExcelData(await response.arrayBuffer(), { source: "SharePoint", fileName: item.name });
-}
-
-async function refreshData(interactive = false) {
+async function refreshData() {
   $("refresh-button").disabled = true;
   $("refresh-button").innerHTML = "<span>↻</span> Loading";
   try {
-    allActivities = uploadedWorkbookFile ? await loadExcelData(uploadedWorkbookFile) : (config.mode === "graph" ? await loadGraphData(interactive) : await loadLocalData());
+    allActivities = config.mode === "google-sheets" ? await loadGoogleSheetsData() : await loadLocalData();
     allActivities.sort((a,b) => new Date(a["Activity Date*"]) - new Date(b["Activity Date*"]));
-    $("connect-button").classList.toggle("hidden", config.mode !== "graph");
     $("demo-banner").classList.toggle("hidden", !metadata.isDemo);
     $("sync-state").classList.toggle("live", !metadata.isDemo);
-    const sourceLabel = metadata.source === "Uploaded Excel" ? `Excel · ${metadata.fileName}` : (metadata.isDemo ? "Demonstration data" : "Live from SharePoint");
+    const sourceLabel = metadata.isDemo ? "Demonstration data" : "Live Google Sheet";
     $("sync-state").querySelector("span").textContent = sourceLabel;
     $("sync-state").title = sourceLabel;
-    $("footer-source").textContent = metadata.source === "Uploaded Excel" ? `${metadata.fileName} · ${metadata.sheet}` : (metadata.isDemo ? "workbook example entries" : "live SharePoint workbook");
+    $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Google Sheet";
     populateFilters(); applyFilters();
     $("last-refreshed").textContent = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
     showToast(`${allActivities.length} activities loaded.`);
     return true;
   } catch (error) {
     showToast(error.message || "Data refresh failed.");
-    if (!allActivities.length && config.mode === "graph") {
-      allActivities = await loadLocalData(); populateFilters(); applyFilters();
-      $("connect-button").classList.remove("hidden");
+    $("demo-banner").classList.remove("hidden");
+    $("demo-banner").innerHTML = `<strong>Live data unavailable:</strong> ${escapeHtml(error.message || "The Google Sheet could not be loaded.")}`;
+    $("sync-state").classList.remove("live");
+    $("sync-state").querySelector("span").textContent = allActivities.length ? "Refresh failed · last loaded data" : "Live data unavailable";
+    if (!allActivities.length) {
+      allActivities = [];
+      $("footer-source").textContent = "Google Sheet unavailable";
+      populateFilters(); applyFilters();
     }
     return false;
   } finally {
@@ -465,26 +413,8 @@ document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click",()
 document.querySelectorAll("[data-go-view]").forEach(button => button.addEventListener("click",()=>switchView(button.dataset.goView)));
 ["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
 $("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id=>$(id).value=""); applyFilters(); });
-$("refresh-button").addEventListener("click",()=>refreshData(false));
-$("connect-button").addEventListener("click",async()=>{
-  const previousFile = uploadedWorkbookFile;
-  uploadedWorkbookFile = undefined;
-  const loaded = await refreshData(true);
-  if (!loaded && previousFile) {
-    uploadedWorkbookFile = previousFile;
-    await refreshData(false);
-    showToast("SharePoint could not be loaded. Continuing with the selected Excel file.");
-  }
-});
-$("excel-upload-button").addEventListener("click",()=>$("excel-file-input").click());
-$("excel-file-input").addEventListener("change",async event=>{
-  const file = event.target.files?.[0];
-  if (!file) return;
-  const previousFile = uploadedWorkbookFile;
-  uploadedWorkbookFile = file;
-  const loaded = await refreshData(false);
-  if (!loaded) uploadedWorkbookFile = previousFile;
-  event.target.value = "";
+$("refresh-button").addEventListener("click",async()=>{
+  await refreshData();
 });
 $("sitrep-country").addEventListener("change",renderSitrep);
 $("sitrep-print").addEventListener("click",()=>window.print());
@@ -492,5 +422,5 @@ $("dialog-close").addEventListener("click",()=>$("activity-dialog").close());
 $("activity-dialog").addEventListener("click",e=>{ if(e.target === $("activity-dialog")) $("activity-dialog").close(); });
 document.body.addEventListener("click",e=>{ const target=e.target.closest("[data-entry]"); if(target) openDetail(target.dataset.entry); });
 
-refreshData(false);
-setInterval(()=>refreshData(false),Math.max(1,Number(config.refreshMinutes)||5)*60000);
+refreshData();
+setInterval(()=>refreshData(),Math.max(1,Number(config.refreshMinutes)||5)*60000);
