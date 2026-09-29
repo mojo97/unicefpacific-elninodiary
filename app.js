@@ -229,11 +229,72 @@ function group(field, measure) {
   return Object.entries(out).sort((a,b) => b[1] - a[1]);
 }
 function renderMonthly() {
-  const months = group("Reporting Month").sort((a,b) => new Date(`1 ${a[0]}`) - new Date(`1 ${b[0]}`));
-  const max = Math.max(1,...months.map(d => d[1]));
-  $("monthly-chart").innerHTML = months.length ? months.map(([month,value]) => `<div class="month-column"><span class="month-value">${value}</span><div class="month-bar" style="height:${Math.max(8,value/max*145)}px"></div><span class="month-label">${escapeHtml(month)}</span></div>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
-  const dates = filteredActivities.map(d => new Date(d["Activity Date*"])).filter(d => !isNaN(d));
-  $("date-range-label").textContent = dates.length ? `${fmtDate.format(new Date(Math.min(...dates)))} – ${fmtDate.format(new Date(Math.max(...dates)))}` : "No selected dates";
+ function renderMonthly() {
+  const monthlyTotals = new Map();
+
+  filteredActivities.forEach(activity => {
+    const reportingMonth = excelDate(activity["Reporting Month"]);
+    let date = new Date(reportingMonth);
+
+    // Use Activity Date when Reporting Month is empty or invalid
+    if (Number.isNaN(date.getTime())) {
+      date = new Date(activity["Activity Date*"]);
+    }
+
+    if (Number.isNaN(date.getTime())) return;
+
+    const key = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (!monthlyTotals.has(key)) {
+      monthlyTotals.set(key, {
+        date: new Date(date.getFullYear(), date.getMonth(), 1),
+        value: 0
+      });
+    }
+
+    monthlyTotals.get(key).value += 1;
+  });
+
+  const months = [...monthlyTotals.values()].sort(
+    (a, b) => a.date - b.date
+  );
+
+  const max = Math.max(1, ...months.map(month => month.value));
+
+  $("monthly-chart").innerHTML = months.length
+    ? months.map(({ date, value }) => {
+        const label = date.toLocaleDateString("en-GB", {
+          month: "short",
+          year: "numeric"
+        });
+
+        return `
+          <div class="month-column">
+            <span class="month-value">${value}</span>
+            <div
+              class="month-bar"
+              style="height:${Math.max(8, value / max * 145)}px"
+            ></div>
+            <span class="month-label">${escapeHtml(label)}</span>
+          </div>
+        `;
+      }).join("")
+    : `<div class="empty-state">
+         No activities match these filters.
+       </div>`;
+
+  const dates = filteredActivities
+    .map(activity => new Date(activity["Activity Date*"]))
+    .filter(date => !Number.isNaN(date.getTime()));
+
+  $("date-range-label").textContent = dates.length
+    ? `${fmtDate.format(new Date(Math.min(...dates)))} – ${fmtDate.format(
+        new Date(Math.max(...dates))
+      )}`
+    : "No selected dates";
+}
 }
 function renderPhase() {
   const phases = Object.keys(PHASE_COLORS).map(p => [p, filteredActivities.filter(d => d["El Niño Phase*"] === p).length]);
