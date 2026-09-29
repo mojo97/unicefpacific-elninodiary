@@ -228,73 +228,31 @@ function group(field, measure) {
   filteredActivities.forEach(d => { const key = d[field] || "Not reported"; out[key] = (out[key] || 0) + (measure ? Number(d[measure]) || 0 : 1); });
   return Object.entries(out).sort((a,b) => b[1] - a[1]);
 }
-function renderMonthly() {
- function renderMonthly() {
-  const monthlyTotals = new Map();
+function formatMonthLabel(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "Not reported";
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-  filteredActivities.forEach(activity => {
-    const reportingMonth = excelDate(activity["Reporting Month"]);
-    let date = new Date(reportingMonth);
+  const googleDate = text.match(/^Date\((\d{4}),\s*(\d{1,2})(?:,\s*\d{1,2})?\)$/i);
+  if (googleDate) return `${monthNames[Number(googleDate[2])]} ${googleDate[1]}`;
 
-    // Use Activity Date when Reporting Month is empty or invalid
-    if (Number.isNaN(date.getTime())) {
-      date = new Date(activity["Activity Date*"]);
-    }
+  const isoDate = text.match(/^(\d{4})[-/]([01]?\d)(?:[-/]\d{1,2})?/);
+  if (isoDate && Number(isoDate[2]) >= 1 && Number(isoDate[2]) <= 12) return `${monthNames[Number(isoDate[2]) - 1]} ${isoDate[1]}`;
 
-    if (Number.isNaN(date.getTime())) return;
+  const monthYear = text.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b.*?\b(\d{4})\b/i);
+  if (monthYear) return `${monthYear[1].slice(0,3)} ${monthYear[2]}`;
 
-    const key = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}`;
+  const serialDate = typeof value === "number" || /^\d{5}(\.\d+)?$/.test(text) ? excelDate(value).match(/^(\d{4})-(\d{2})/) : null;
+  if (serialDate) return `${monthNames[Number(serialDate[2]) - 1]} ${serialDate[1]}`;
 
-    if (!monthlyTotals.has(key)) {
-      monthlyTotals.set(key, {
-        date: new Date(date.getFullYear(), date.getMonth(), 1),
-        value: 0
-      });
-    }
-
-    monthlyTotals.get(key).value += 1;
-  });
-
-  const months = [...monthlyTotals.values()].sort(
-    (a, b) => a.date - b.date
-  );
-
-  const max = Math.max(1, ...months.map(month => month.value));
-
-  $("monthly-chart").innerHTML = months.length
-    ? months.map(({ date, value }) => {
-        const label = date.toLocaleDateString("en-GB", {
-          month: "short",
-          year: "numeric"
-        });
-
-        return `
-          <div class="month-column">
-            <span class="month-value">${value}</span>
-            <div
-              class="month-bar"
-              style="height:${Math.max(8, value / max * 145)}px"
-            ></div>
-            <span class="month-label">${escapeHtml(label)}</span>
-          </div>
-        `;
-      }).join("")
-    : `<div class="empty-state">
-         No activities match these filters.
-       </div>`;
-
-  const dates = filteredActivities
-    .map(activity => new Date(activity["Activity Date*"]))
-    .filter(date => !Number.isNaN(date.getTime()));
-
-  $("date-range-label").textContent = dates.length
-    ? `${fmtDate.format(new Date(Math.min(...dates)))} – ${fmtDate.format(
-        new Date(Math.max(...dates))
-      )}`
-    : "No selected dates";
+  return text;
 }
+function renderMonthly() {
+  const months = group("Reporting Month").sort((a,b) => new Date(`1 ${a[0]}`) - new Date(`1 ${b[0]}`));
+  const max = Math.max(1,...months.map(d => d[1]));
+  $("monthly-chart").innerHTML = months.length ? months.map(([month,value]) => `<div class="month-column"><span class="month-value">${value}</span><div class="month-bar" style="height:${Math.max(8,value/max*145)}px"></div><span class="month-label">${escapeHtml(formatMonthLabel(month))}</span></div>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  const dates = filteredActivities.map(d => new Date(d["Activity Date*"])).filter(d => !isNaN(d));
+  $("date-range-label").textContent = dates.length ? `${fmtDate.format(new Date(Math.min(...dates)))} – ${fmtDate.format(new Date(Math.max(...dates)))}` : "No selected dates";
 }
 function renderPhase() {
   const phases = Object.keys(PHASE_COLORS).map(p => [p, filteredActivities.filter(d => d["El Niño Phase*"] === p).length]);
