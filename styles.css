@@ -66,8 +66,12 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .monthly-chart { height: 215px; display: flex; align-items: flex-end; gap: clamp(8px,2vw,24px); padding: 12px 8px 0; border-bottom: 1px solid #cfdde2; background: repeating-linear-gradient(to top,transparent 0,transparent 52px,#eaf0f2 53px); }
 .month-column { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 7px; min-width: 46px; }
 .month-value { color: var(--navy); font-size: 12px; font-weight: 800; }
-.month-bar { width: min(48px,72%); min-height: 8px; border-radius: 9px 9px 3px 3px; background: linear-gradient(#16c7d9,#008dc9); box-shadow: 0 5px 14px rgba(0,141,201,.22); }
+.month-bar { width: min(48px,72%); min-height: 8px; display: flex; flex-direction: column-reverse; overflow: hidden; border-radius: 9px 9px 3px 3px; background: #eaf1f3; box-shadow: 0 5px 14px rgba(0,141,201,.16); }
+.month-bar-segment { min-height: 3px; width: 100%; }
 .month-label { min-height: 30px; color: var(--muted); font-size: 11px; text-align: center; }
+.sector-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; }
+.sector-legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+.sector-legend-item i { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 3px; }
 .donut-wrap { display: grid; place-items: center; min-height: 130px; }
 .donut { width: 128px; height: 128px; display: grid; place-items: center; border-radius: 50%; position: relative; }
 .donut::after { content: ""; position: absolute; inset: 23px; border-radius: 50%; background: #fff; }
@@ -192,6 +196,9 @@ tbody tr:hover { background: #f7fbfc; }
 .sitrep-intervention-list strong,.sitrep-intervention-list span { display: block; }
 .sitrep-intervention-list strong { margin-bottom: 3px; color: var(--ocha-dark); }
 .sitrep-intervention-list small { margin-top: 3px; }
+.sitrep-activity-meta { display: flex !important; flex-wrap: wrap; gap: 5px 14px; }
+.sitrep-activity-meta span { display: inline-flex !important; gap: 4px; }
+.sitrep-activity-meta b { color: var(--ocha-dark); font-weight: 800; }
 .sitrep-more { margin-top: 8px !important; color: #71858e !important; font-style: italic; }
 .sitrep-partners ul { padding-left: 15px; }
 .sitrep-reach { display: flex; flex-direction: column; align-items: flex-start; }

@@ -6,7 +6,8 @@ const FIELD_ORDER = [
   "Evidence Link", "Focal Point*", "Submission Date*"
 ];
 const FIELD_ALIASES = {
-  "UNICEF Unit*": ["UNICEF Sector*", "UNICEF Sectors*", "UNICEF Unit / Sector*"]
+  "UNICEF Unit*": ["UNICEF Sector*", "UNICEF Sectors*", "UNICEF Unit / Sector*"],
+  "Submission Date*": ["Reporting Date", "Reporting Date*", "Date Reported", "Date Reported*"]
 };
 
 const COUNTRY_COORDS = {
@@ -22,6 +23,19 @@ const COUNTRY_COORDS = {
 };
 
 const PHASE_COLORS = { "Preparedness": "#38bdf8", "Anticipatory Action": "#f7bf45", "Response": "#ef6f61", "Recovery": "#43b982" };
+const SECTOR_COLORS = {
+  "education": "#1f77b4",
+  "wash": "#00a7b5",
+  "health": "#d64b4b",
+  "nutrition": "#f28e2b",
+  "child protection": "#8b5fbf",
+  "social protection": "#59a14f",
+  "communication": "#e3b341",
+  "communications": "#e3b341",
+  "programme effectiveness": "#4e6e81",
+  "supply": "#d45087"
+};
+const SECTOR_PALETTE = ["#008dc9","#00a7b5","#ef6f61","#f28e2b","#8b5fbf","#59a14f","#e3b341","#4e6e81","#d45087","#7a9e9f"];
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
 let allActivities = [], filteredActivities = [], metadata = { isDemo: true }, map, markerLayer;
 
@@ -31,6 +45,14 @@ const fmtUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "US
 const fmtDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const escapeHtml = (value) => String(value ?? "—").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const phaseColor = (phase) => PHASE_COLORS[phase] || "#91a6af";
+const sectorColor = sector => {
+  const name = String(sector || "Sector not reported").trim().toLowerCase();
+  if (SECTOR_COLORS[name]) return SECTOR_COLORS[name];
+  const known = Object.keys(SECTOR_COLORS).find(key => name.includes(key));
+  if (known) return SECTOR_COLORS[known];
+  const hash = [...name].reduce((total,char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 0);
+  return SECTOR_PALETTE[hash % SECTOR_PALETTE.length];
+};
 const canonicalHeader = value => String(value ?? "")
   .normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "")
@@ -173,6 +195,7 @@ function populateFilters() {
 function applyFilters() {
   const search = $("search-filter").value.trim().toLowerCase();
   const unit = $("unit-filter").value, country = $("country-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
+  if ($("sitrep-country") && $("sitrep-country").value !== country) $("sitrep-country").value = country;
   filteredActivities = allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
     return (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
@@ -247,10 +270,37 @@ function formatMonthLabel(value) {
 
   return text;
 }
+
+function monthSortKey(value, fallbackDate) {
+  const label = formatMonthLabel(value || fallbackDate);
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const match = label.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/i);
+  if (match) return Date.UTC(Number(match[2]),monthNames.findIndex(month => month.toLowerCase() === match[1].toLowerCase()),1);
+  const fallback = new Date(fallbackDate || value);
+  return Number.isNaN(fallback.getTime()) ? Number.MAX_SAFE_INTEGER : Date.UTC(fallback.getUTCFullYear(),fallback.getUTCMonth(),1);
+}
 function renderMonthly() {
-  const months = group("Reporting Month").sort((a,b) => new Date(`1 ${a[0]}`) - new Date(`1 ${b[0]}`));
-  const max = Math.max(1,...months.map(d => d[1]));
-  $("monthly-chart").innerHTML = months.length ? months.map(([month,value]) => `<div class="month-column"><span class="month-value">${value}</span><div class="month-bar" style="height:${Math.max(8,value/max*145)}px"></div><span class="month-label">${escapeHtml(formatMonthLabel(month))}</span></div>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  const monthMap = new Map();
+  filteredActivities.forEach(activity => {
+    const rawMonth = activity["Reporting Month"] || activity["Activity Date*"] || "Not reported";
+    const month = formatMonthLabel(rawMonth);
+    const sortKey = monthSortKey(rawMonth,activity["Activity Date*"]);
+    const sector = activity["UNICEF Unit*"] || "Sector not reported";
+    if (!monthMap.has(month)) monthMap.set(month,{ month, sortKey, total: 0, sectors: {} });
+    const entry = monthMap.get(month);
+    entry.sortKey = Math.min(entry.sortKey,sortKey);
+    entry.total += 1;
+    entry.sectors[sector] = (entry.sectors[sector] || 0) + 1;
+  });
+
+  const months = [...monthMap.values()].sort((a,b) => a.sortKey - b.sortKey || a.month.localeCompare(b.month));
+  const sectors = [...new Set(filteredActivities.map(activity => activity["UNICEF Unit*"] || "Sector not reported"))].sort();
+  const max = Math.max(1,...months.map(month => month.total));
+  $("monthly-chart").innerHTML = months.length ? months.map(({month,total,sectors:sectorCounts}) => {
+    const segments = sectors.filter(sector => sectorCounts[sector]).map(sector => `<span class="month-bar-segment" style="flex-grow:${sectorCounts[sector]};background:${sectorColor(sector)}" title="${escapeHtml(sector)}: ${sectorCounts[sector]} ${sectorCounts[sector] === 1 ? "activity" : "activities"}"></span>`).join("");
+    return `<div class="month-column"><span class="month-value">${total}</span><div class="month-bar" style="height:${Math.max(8,total/max*145)}px" aria-label="${escapeHtml(formatMonthLabel(month))}: ${total} activities by sector">${segments}</div><span class="month-label">${escapeHtml(formatMonthLabel(month))}</span></div>`;
+  }).join("") : `<div class="empty-state">No activities match these filters.</div>`;
+  $("monthly-legend").innerHTML = sectors.map(sector => `<span class="sector-legend-item"><i style="background:${sectorColor(sector)}"></i>${escapeHtml(sector)}</span>`).join("");
   const dates = filteredActivities.map(d => new Date(d["Activity Date*"])).filter(d => !isNaN(d));
   $("date-range-label").textContent = dates.length ? `${fmtDate.format(new Date(Math.min(...dates)))} – ${fmtDate.format(new Date(Math.max(...dates)))}` : "No selected dates";
 }
@@ -331,16 +381,17 @@ function narrativeList(items, emptyText) {
   return items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="sitrep-not-reported">${escapeHtml(emptyText)}</p>`;
 }
 
-function interventionList(rows, limit = 3) {
-  const items = rows.slice(0, limit).map(row => {
+function interventionList(rows) {
+  const items = rows.map(row => {
     const title = String(row["Activity Title*"] || "Intervention not titled").trim();
     const description = String(row["What Was Done?*"] || "No intervention details reported.").trim();
-    const date = new Date(row["Activity Date*"]);
-    const dateLabel = Number.isNaN(date.getTime()) ? "Date not reported" : fmtDate.format(date);
-    return `<li><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span><small>${dateLabel} · ${escapeHtml(row["Implementation Status*"] || "Status not reported")}</small></li>`;
+    const activityDate = new Date(row["Activity Date*"]);
+    const reportingDate = new Date(row["Submission Date*"]);
+    const activityDateLabel = Number.isNaN(activityDate.getTime()) ? "Not reported" : fmtDate.format(activityDate);
+    const reportingDateLabel = Number.isNaN(reportingDate.getTime()) ? "Not reported" : fmtDate.format(reportingDate);
+    return `<li><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span><small class="sitrep-activity-meta"><span><b>Activity date</b>${activityDateLabel}</span><span><b>Reporting date</b>${reportingDateLabel}</span><span><b>Status</b>${escapeHtml(row["Implementation Status*"] || "Not reported")}</span></small></li>`;
   });
-  const remainder = rows.length - items.length;
-  return `<ul class="sitrep-intervention-list">${items.join("")}</ul>${remainder > 0 ? `<p class="sitrep-more">+${fmtNum.format(remainder)} additional ${remainder === 1 ? "activity" : "activities"} included in totals.</p>` : ""}`;
+  return `<ul class="sitrep-intervention-list">${items.join("")}</ul>`;
 }
 
 function renderSitrep() {
@@ -446,7 +497,10 @@ $("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter"
 $("refresh-button").addEventListener("click",async()=>{
   await refreshData();
 });
-$("sitrep-country").addEventListener("change",renderSitrep);
+$("sitrep-country").addEventListener("change",()=>{
+  $("country-filter").value = $("sitrep-country").value;
+  applyFilters();
+});
 $("sitrep-print").addEventListener("click",()=>window.print());
 $("dialog-close").addEventListener("click",()=>$("activity-dialog").close());
 $("activity-dialog").addEventListener("click",e=>{ if(e.target === $("activity-dialog")) $("activity-dialog").close(); });

@@ -57,7 +57,7 @@ Funding labels follow the same rule. Planned or On Hold records show **Funding r
 | Key figures | Activities, People Reached, Children Reached, Funding Used and Implementation Status |
 | Context and assurance | Country, Location, Phase, Activity Date, Submission Date and Evidence Link |
 
-The country selector is specific to the report and begins with **All countries**. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
+The country selector begins with **All countries** and stays synchronized with the dashboard Country filter. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Every matching activity is listed under its country and UNICEF Sector, including separate **Activity date** and **Reporting date** fields. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
 
 The report is a draft synthesized from activity records, not a replacement for a validated humanitarian needs assessment. Review the generated narrative, totals, evidence and any personal information before external circulation. With many sectors or unusually long narratives, the browser may continue the report onto a second page rather than cut content.
 
