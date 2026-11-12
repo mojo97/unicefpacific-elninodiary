@@ -8,9 +8,9 @@ The site reads three Google Sheet tabs whenever it loads and whenever **Refresh*
 
 - **Activity Diary**: dashboard activities and Situation Report content.
 - **Key Messages** (`gid=1470373217`): `Key Messages` and `Link`; an optional `Sector` column is supported. Without a Sector value, the site infers the sector from the resource title or filename.
-- **Response Plan** (`gid=542411509`): `Country` and `Response Plan`; optional `URL`, `Web Link` or `Plan URL` columns are supported.
+- **Response Plan** (`gid=542411509`): `Country` and `Response Plan Link`.
 
-For a direct document button, place the full `https://...` address in the Link/Response Plan cell or add one of the optional URL columns. When a linked filename is displayed without an exposed URL, the site opens the relevant source tab so the user can access the linked file there.
+The `Link` and `Response Plan Link` cells may contain either a full `https://...` address or a Google Sheets hyperlink/smart chip. The site reads the cell's actual document link and never redirects these buttons to the source Google Sheet.
 
 ## Activity date range
 

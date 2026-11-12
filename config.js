@@ -3,6 +3,7 @@ window.DIARY_CONFIG = {
   mode: "google-sheets",
   refreshMinutes: 5,
   googleSheets: {
+    workbookUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/export?format=xlsx",
     dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&sheet=Activity%20Diary",
     displayName: "UNICEF El Niño Activity Diary",
     keyMessages: {

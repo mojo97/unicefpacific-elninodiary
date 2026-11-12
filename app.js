@@ -37,7 +37,7 @@ const SECTOR_COLORS = {
 };
 const SECTOR_PALETTE = ["#008dc9","#00a7b5","#ef6f61","#f28e2b","#8b5fbf","#59a14f","#e3b341","#4e6e81","#d45087","#7a9e9f"];
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
-let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], metadata = { isDemo: true }, map, markerLayer;
+let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], metadata = { isDemo: true }, map, markerLayer, supportingWorkbookPromise;
 
 const $ = (id) => document.getElementById(id);
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -150,6 +150,50 @@ function directUrl(value) {
   return /^https?:\/\/[^\s]+$/i.test(text) ? text : "";
 }
 
+function workbookRows(workbook, sheetNames, requiredHeaders) {
+  const wantedSheets = sheetNames.map(canonicalHeader);
+  const sheetName = workbook.SheetNames.find(name => wantedSheets.includes(canonicalHeader(name)));
+  if (!sheetName) throw new Error(`The ${sheetNames[0]} tab was not found.`);
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+  const required = requiredHeaders.map(canonicalHeader);
+  const headerIndex = rows.findIndex(row => {
+    const labels = row.map(canonicalHeader);
+    return required.every(header => labels.includes(header));
+  });
+  if (headerIndex < 0) throw new Error(`Required columns were not found in ${sheetName}: ${requiredHeaders.join(", ")}`);
+  const headers = rows[headerIndex].map(value => String(value ?? "").trim());
+  return rows.slice(headerIndex + 1).map((row,rowOffset) => {
+    const values = Object.fromEntries(headers.map((header,columnIndex) => [header,row[columnIndex] ?? ""]));
+    values.__links = Object.fromEntries(headers.map((header,columnIndex) => {
+      const cell = sheet[XLSX.utils.encode_cell({ r: headerIndex + rowOffset + 1, c: columnIndex })];
+      return [canonicalHeader(header),String(cell?.l?.Target || "").trim()];
+    }));
+    return values;
+  }).filter(row => Object.entries(row).some(([key,value]) => key !== "__links" && String(value).trim()));
+}
+
+function rowLink(row, names) {
+  for (const name of names) {
+    const link = directUrl(row.__links?.[canonicalHeader(name)]);
+    if (link) return link;
+  }
+  return "";
+}
+
+async function loadSupportingWorkbook() {
+  if (supportingWorkbookPromise) return supportingWorkbookPromise;
+  supportingWorkbookPromise = (async() => {
+    const url = String(config.googleSheets?.workbookUrl || "").trim();
+    if (!url) throw new Error("The Google workbook export link is not configured.");
+    const separator = url.includes("?") ? "&" : "?";
+    const response = await fetch(`${url}${separator}_=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Google workbook export returned ${response.status}.`);
+    return XLSX.read(await response.arrayBuffer(), { type: "array", cellDates: true });
+  })();
+  return supportingWorkbookPromise;
+}
+
 function inferSector(value) {
   const text = String(value || "").toLowerCase();
   if (/education|school|learning/.test(text)) return "Education";
@@ -173,24 +217,35 @@ async function fetchCsvRows(sheetConfig, requiredHeaders) {
 
 async function loadKeyMessages() {
   const sheetConfig = config.googleSheets?.keyMessages || {};
-  const rows = await fetchCsvRows(sheetConfig,["Key Messages","Link"]);
+  let rows;
+  try {
+    rows = workbookRows(await loadSupportingWorkbook(),["Key Messages"],["Key Messages","Link"]);
+  } catch (error) {
+    rows = await fetchCsvRows(sheetConfig,["Key Messages","Link"]);
+  }
   return rows.map(row => {
     const title = rowValue(row,["Key Messages","Key Message","Title"]);
     const documentLabel = rowValue(row,["Link","Document","File"]);
     const sector = rowValue(row,["Sector","UNICEF Sector","UNICEF Unit"]) || inferSector(`${title} ${documentLabel}`);
-    const documentUrl = directUrl(rowValue(row,["URL","Web Link","Document URL"])) || directUrl(documentLabel);
-    return { title, documentLabel, sector, url: documentUrl || sheetConfig.sourceUrl, isDirect: Boolean(documentUrl) };
+    const documentUrl = rowLink(row,["Link"]) || directUrl(documentLabel);
+    return { title, documentLabel, sector, url: documentUrl };
   }).filter(item => item.title);
 }
 
 async function loadResponsePlans() {
   const sheetConfig = config.googleSheets?.responsePlans || {};
-  const rows = await fetchCsvRows(sheetConfig,["Country","Response Plan"]);
+  let rows;
+  try {
+    rows = workbookRows(await loadSupportingWorkbook(),["Response Plan","Response Plans"],["Country","Response Plan Link"]);
+  } catch (error) {
+    rows = await fetchCsvRows(sheetConfig,["Country","Response Plan Link"]);
+  }
   return rows.map(row => {
     const country = rowValue(row,["Country"]);
-    const plan = rowValue(row,["Response Plan","Plan"]);
-    const planUrl = directUrl(rowValue(row,["URL","Web Link","Plan URL"])) || directUrl(plan);
-    return { country, plan, url: planUrl || sheetConfig.sourceUrl, isDirect: Boolean(planUrl) };
+    const plan = rowValue(row,["Response Plan","Plan","Response Plan Link"]);
+    const linkLabel = rowValue(row,["Response Plan Link"]);
+    const planUrl = rowLink(row,["Response Plan Link"]) || directUrl(linkLabel);
+    return { country, plan, url: planUrl };
   }).filter(item => item.country);
 }
 
@@ -214,6 +269,7 @@ async function loadGoogleSheetsData() {
 async function refreshData() {
   $("refresh-button").disabled = true;
   $("refresh-button").innerHTML = "<span>↻</span> Loading";
+  supportingWorkbookPromise = null;
   try {
     allActivities = config.mode === "google-sheets" ? await loadGoogleSheetsData() : await loadLocalData();
     if (config.mode === "google-sheets") {
@@ -440,20 +496,28 @@ function renderMap() {
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
     const marker = L.circleMarker([d.latitude,lng], { radius: 9, color: "#fff", weight: 2, fillColor: phaseColor(d["El Niño Phase*"]), fillOpacity: .95 });
     marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
+    marker.on("click",() => selectMapCountry(d["Country*"]));
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);
   });
   if (bounds.length) map.fitBounds(bounds,{padding:[40,40],maxZoom:5});
   const countries = group("Country*");
   $("map-count").textContent = `${countries.length} mapped ${countries.length === 1 ? "location" : "locations"}`;
-  $("map-country-list").innerHTML = countries.map(([name,count]) => `<div class="country-row"><span>${escapeHtml(name)}</span><strong>${count}</strong></div>`).join("");
+  $("map-country-list").innerHTML = countries.map(([name,count]) => `<button class="country-row" data-map-country="${escapeHtml(name)}" type="button"><span>${escapeHtml(name)}</span><strong>${count}</strong></button>`).join("");
   renderResponsePlans();
+}
+
+function selectMapCountry(country) {
+  const filter = $("country-filter");
+  if (!filter || ![...filter.options].some(option => option.value === country)) return;
+  filter.value = country;
+  applyFilters();
 }
 
 function renderResponsePlans() {
   const container = $("map-response-plans");
   const selectedCountry = $("country-filter").value;
   if (!selectedCountry) {
-    container.innerHTML = `<p class="supporting-empty">Select one country above to see its response plan.</p>`;
+    container.innerHTML = `<p class="supporting-empty">Select a country on the map or in the country list to see its response plan.</p>`;
     return;
   }
   const matches = responsePlans.filter(item => canonicalHeader(item.country) === canonicalHeader(selectedCountry));
@@ -466,7 +530,7 @@ function renderResponsePlans() {
     container.innerHTML = `<p class="supporting-empty">${escapeHtml(selectedCountry)} is listed, but its response plan has not yet been added.</p>`;
     return;
   }
-  container.innerHTML = available.map(item => `<article class="response-plan-card"><strong>${escapeHtml(item.plan)}</strong><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${item.isDirect ? "Open response plan" : "Open response-plan sheet"} ↗</a></article>`).join("");
+  container.innerHTML = available.map(item => `<article class="response-plan-card"><strong>${escapeHtml(item.plan)}</strong>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open response plan ↗</a>` : `<span class="missing-resource-link">Response Plan Link is not available</span>`}</article>`).join("") + `<button class="map-clear-country" data-map-country="" type="button">Show all countries</button>`;
 }
 
 function renderKeyMessages() {
@@ -481,7 +545,7 @@ function renderKeyMessages() {
   const groups = [...new Set(rows.map(item => item.sector || "Cross-sector / General"))].sort();
   $("key-messages-groups").innerHTML = groups.map(sector => {
     const messages = rows.filter(item => (item.sector || "Cross-sector / General") === sector);
-    return `<section class="key-message-sector" style="--sector-color:${sectorColor(sector)}"><header><div><p>UNICEF SECTOR</p><h3>${escapeHtml(sector)}</h3></div><span>${messages.length} ${messages.length === 1 ? "resource" : "resources"}</span></header><div class="key-message-grid">${messages.map(item => `<article class="key-message-card"><div><span class="key-message-type">KEY MESSAGE RESOURCE</span><h4>${escapeHtml(item.title)}</h4>${item.documentLabel ? `<p>${escapeHtml(item.documentLabel)}</p>` : ""}</div><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${item.isDirect ? "Open resource" : "Open source sheet"} ↗</a></article>`).join("")}</div></section>`;
+    return `<section class="key-message-sector" style="--sector-color:${sectorColor(sector)}"><header><div><p>UNICEF SECTOR</p><h3>${escapeHtml(sector)}</h3></div><span>${messages.length} ${messages.length === 1 ? "resource" : "resources"}</span></header><div class="key-message-grid">${messages.map(item => `<article class="key-message-card"><div><span class="key-message-type">KEY MESSAGE RESOURCE</span><h4>${escapeHtml(item.title)}</h4>${item.documentLabel ? `<p>${escapeHtml(item.documentLabel)}</p>` : ""}</div>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open resource ↗</a>` : `<span class="missing-resource-link">Link is not available</span>`}</article>`).join("")}</div></section>`;
   }).join("");
 }
 
@@ -624,7 +688,16 @@ $("sitrep-country").addEventListener("change",()=>{
 $("sitrep-print").addEventListener("click",()=>window.print());
 $("dialog-close").addEventListener("click",()=>$("activity-dialog").close());
 $("activity-dialog").addEventListener("click",e=>{ if(e.target === $("activity-dialog")) $("activity-dialog").close(); });
-document.body.addEventListener("click",e=>{ const target=e.target.closest("[data-entry]"); if(target) openDetail(target.dataset.entry); });
+document.body.addEventListener("click",e=>{
+  const countryTarget = e.target.closest("[data-map-country]");
+  if (countryTarget) {
+    $("country-filter").value = countryTarget.dataset.mapCountry;
+    applyFilters();
+    return;
+  }
+  const target=e.target.closest("[data-entry]");
+  if(target) openDetail(target.dataset.entry);
+});
 
 refreshData();
 setInterval(()=>refreshData(),Math.max(1,Number(config.refreshMinutes)||5)*60000);

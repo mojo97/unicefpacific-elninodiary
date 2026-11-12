@@ -123,15 +123,19 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .map-summary { padding: 22px; border-left: 1px solid var(--line); }
 .map-summary h3 { margin: 5px 0 20px; font: 800 26px Manrope,sans-serif; }
 .country-list { display: grid; gap: 8px; }
-.country-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf2f4; font-size: 13px; }
+.country-row { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; padding: 10px 8px; border: 0; border-bottom: 1px solid #edf2f4; border-radius: 8px; color: var(--ink); background: transparent; font: 600 13px "DM Sans",sans-serif; text-align: left; cursor: pointer; }
+.country-row:hover, .country-row:focus-visible { color: var(--blue); background: #f0f9fc; outline: none; }
 .country-row strong { min-width: 28px; height: 28px; display: grid; place-items: center; color: var(--navy); border-radius: 9px; background: #dcf5f8; }
-.response-plan-panel { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.response-plan-panel { margin: 0 0 20px; padding: 0 0 20px; border-bottom: 1px solid var(--line); }
 .response-plan-panel .section-kicker { margin-bottom: 10px; font-size: 10px; }
 .response-plan-card { display: grid; gap: 10px; padding: 13px; border: 1px solid #cfe2e8; border-left: 4px solid var(--blue); border-radius: 11px; background: #f4fafc; }
 .response-plan-card + .response-plan-card { margin-top: 9px; }
 .response-plan-card strong { color: var(--navy); font-size: 12px; line-height: 1.4; }
 .response-plan-card a { width: fit-content; color: var(--blue); font-size: 11px; font-weight: 800; text-decoration: none; }
 .response-plan-card a:hover { text-decoration: underline; }
+.missing-resource-link { color: #8a3d38; font-size: 11px; font-weight: 700; }
+.map-clear-country { margin-top: 10px; padding: 0; border: 0; color: var(--blue); background: transparent; font: 800 11px "DM Sans",sans-serif; cursor: pointer; }
+.map-clear-country:hover { text-decoration: underline; }
 .supporting-empty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .map-note { margin-top: 22px; padding: 14px; border-radius: 12px; color: #5a491f; background: #fff6df; font-size: 12px; }
 .map-note p { margin: 6px 0 0; line-height: 1.5; }

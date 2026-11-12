@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261112-19">
+  <link rel="stylesheet" href="styles.css?v=20261112-20">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -78,7 +78,7 @@
 
     <section class="view" id="view-map">
       <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
     <section class="view" id="view-register">
@@ -115,9 +115,9 @@
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20261112-19"></script>
+  <script src="config.js?v=20261112-20"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261112-19"></script>
+  <script src="app.js?v=20261112-20"></script>
 </body>
 </html>

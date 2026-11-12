@@ -21,7 +21,7 @@ If UNICEF policy does not allow link-accessible operational data, do not publish
 1. Edit or paste approved records into the **Activity Diary** sheet.
 2. Keep all 21 required column headings unchanged.
 3. Keep one activity per row and ensure Activity Date and Activity Title are completed.
-4. Keep the supporting tab headers as `Key Messages` / `Link` and `Country` / `Response Plan`. You may add `Sector` to Key Messages and `URL` to either supporting tab for direct document links.
+4. Keep the supporting tab headers as `Key Messages` / `Link` and `Country` / `Response Plan Link`. The link cells may be full web addresses or Google Sheets hyperlink/smart-chip cells. You may add `Sector` to Key Messages; otherwise the site infers it from the title and filename.
 4. Wait for Google Sheets to save the changes.
 5. Open the dashboard and select **Refresh**. The dashboard also checks for updates every five minutes.
 
