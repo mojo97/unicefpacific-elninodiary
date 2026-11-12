@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261111-18">
+  <link rel="stylesheet" href="styles.css?v=20261112-19">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -33,6 +33,7 @@
     <button class="tab" data-view="timeline" type="button">Activity timeline</button>
     <button class="tab" data-view="map" type="button">Map</button>
     <button class="tab" data-view="register" type="button">Activity register</button>
+    <button class="tab" data-view="key-messages" type="button">Key messages</button>
     <button class="tab" data-view="sitrep" type="button">Situation report</button>
   </nav>
 
@@ -42,6 +43,8 @@
     <label><span>Country</span><select id="country-filter"><option value="">All countries</option></select></label>
     <label><span>Phase</span><select id="phase-filter"><option value="">All phases</option></select></label>
     <label><span>Status</span><select id="status-filter"><option value="">All statuses</option></select></label>
+    <label><span>Activity date from</span><input id="activity-start-filter" type="date" aria-label="Activity date from"></label>
+    <label><span>Activity date to</span><input id="activity-end-filter" type="date" aria-label="Activity date to"></label>
     <button id="clear-filters" class="clear-button" type="button">Clear filters</button>
   </section>
 
@@ -75,12 +78,21 @@
 
     <section class="view" id="view-map">
       <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
     <section class="view" id="view-register">
       <div class="view-intro"><div><p class="section-kicker">AUDITABLE REGISTER</p><h2>Every diary entry</h2></div><p>Select a row to see all 21 workbook fields.</p></div>
       <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>UNICEF Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
+    </section>
+
+    <section class="view" id="view-key-messages">
+      <div class="view-intro">
+        <div><p class="section-kicker">COMMUNICATION RESOURCES</p><h2>El Niño key messages by sector</h2></div>
+        <p>Resources are read live from the Key Messages tab in the reporting Google Sheet. Use the UNICEF Sector filter to narrow the list.</p>
+      </div>
+      <div id="key-message-status" class="source-status"></div>
+      <div id="key-messages-groups" class="key-message-groups" aria-live="polite"></div>
     </section>
 
     <section class="view" id="view-sitrep">
@@ -103,9 +115,9 @@
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20260922-13"></script>
+  <script src="config.js?v=20261112-19"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261111-18"></script>
+  <script src="app.js?v=20261112-19"></script>
 </body>
 </html>

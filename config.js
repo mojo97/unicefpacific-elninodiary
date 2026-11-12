@@ -4,6 +4,14 @@ window.DIARY_CONFIG = {
   refreshMinutes: 5,
   googleSheets: {
     dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&sheet=Activity%20Diary",
-    displayName: "UNICEF El Niño Activity Diary"
+    displayName: "UNICEF El Niño Activity Diary",
+    keyMessages: {
+      dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&gid=1470373217",
+      sourceUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/edit?gid=1470373217#gid=1470373217"
+    },
+    responsePlans: {
+      dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&gid=542411509",
+      sourceUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/edit?gid=542411509#gid=542411509"
+    }
   }
 };

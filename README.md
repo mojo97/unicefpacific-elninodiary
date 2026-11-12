@@ -1,6 +1,20 @@
 # UNICEF Pacific El Niño Activity Diary
 
-This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a chronological activity timeline, a country-level map, a searchable register, a complete record view, and a print-ready country Situation Report.
+This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a chronological activity timeline, a country-level map, live key-message resources, country response plans, a searchable register, a complete record view, and a print-ready country Situation Report.
+
+## Live supporting tabs
+
+The site reads three Google Sheet tabs whenever it loads and whenever **Refresh** is selected:
+
+- **Activity Diary**: dashboard activities and Situation Report content.
+- **Key Messages** (`gid=1470373217`): `Key Messages` and `Link`; an optional `Sector` column is supported. Without a Sector value, the site infers the sector from the resource title or filename.
+- **Response Plan** (`gid=542411509`): `Country` and `Response Plan`; optional `URL`, `Web Link` or `Plan URL` columns are supported.
+
+For a direct document button, place the full `https://...` address in the Link/Response Plan cell or add one of the optional URL columns. When a linked filename is displayed without an exposed URL, the site opens the relevant source tab so the user can access the linked file there.
+
+## Activity date range
+
+Use **Activity date from** and **Activity date to** for an inclusive date range. The range filters the Overview, Activity timeline, Map, Activity register and Situation Report. **Clear filters** resets both dates with the other dashboard filters.
 
 The header now includes the UNICEF logo. Use of the UNICEF name and logo should remain limited to an authorised UNICEF deployment and follow current organisational brand guidance.
 

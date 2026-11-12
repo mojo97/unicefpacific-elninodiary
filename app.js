@@ -37,7 +37,7 @@ const SECTOR_COLORS = {
 };
 const SECTOR_PALETTE = ["#008dc9","#00a7b5","#ef6f61","#f28e2b","#8b5fbf","#59a14f","#e3b341","#4e6e81","#d45087","#7a9e9f"];
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
-let allActivities = [], filteredActivities = [], metadata = { isDemo: true }, map, markerLayer;
+let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], metadata = { isDemo: true }, map, markerLayer;
 
 const $ = (id) => document.getElementById(id);
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -90,9 +90,9 @@ function normalizeActivity(raw) {
   return activity;
 }
 
-function parseExcelData(bytes, sourceDetails) {
+function parseExcelData(source, sourceDetails) {
   if (!window.XLSX) throw new Error("The Excel reader did not load. Check your internet connection and try again.");
-  const workbook = XLSX.read(bytes, { type: "array", cellDates: true });
+  const workbook = XLSX.read(source, { type: typeof source === "string" ? "string" : "array", cellDates: true });
   const preferredSheet = workbook.Sheets["Activity Diary"] ? "Activity Diary" : null;
   const candidates = preferredSheet ? [preferredSheet] : workbook.SheetNames;
   let selected;
@@ -124,6 +124,76 @@ function parseExcelData(bytes, sourceDetails) {
   return activities;
 }
 
+function parseCsvRows(source, requiredHeaders) {
+  if (!window.XLSX) throw new Error("The Google Sheet reader did not load.");
+  const workbook = XLSX.read(source, { type: "string", cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+  const required = requiredHeaders.map(canonicalHeader);
+  const headerIndex = rows.findIndex(row => {
+    const labels = row.map(canonicalHeader);
+    return required.every(header => labels.includes(header));
+  });
+  if (headerIndex < 0) throw new Error(`Required columns were not found: ${requiredHeaders.join(", ")}`);
+  const headers = rows[headerIndex].map(value => String(value ?? "").trim());
+  return rows.slice(headerIndex + 1).map(row => Object.fromEntries(headers.map((header,index) => [header,row[index] ?? ""]))).filter(row => Object.values(row).some(value => String(value).trim()));
+}
+
+function rowValue(row, names) {
+  const wanted = names.map(canonicalHeader);
+  const key = Object.keys(row).find(header => wanted.includes(canonicalHeader(header)));
+  return key ? String(row[key] ?? "").trim() : "";
+}
+
+function directUrl(value) {
+  const text = String(value || "").trim();
+  return /^https?:\/\/[^\s]+$/i.test(text) ? text : "";
+}
+
+function inferSector(value) {
+  const text = String(value || "").toLowerCase();
+  if (/education|school|learning/.test(text)) return "Education";
+  if (/nutrition|feeding|malnutrition/.test(text)) return "Health & Nutrition";
+  if (/health|medical|clinic/.test(text)) return "Health & Nutrition";
+  if (/wash|water|sanitation|hygiene/.test(text)) return "WASH";
+  if (/child protection|protection|safeguard/.test(text)) return "Child Protection";
+  if (/social.*behaviour|behavior|sbc|communication|cfm|feedback/.test(text)) return "Social & Behaviour Change";
+  if (/supply|logistics|procurement/.test(text)) return "Supply";
+  return "Cross-sector / General";
+}
+
+async function fetchCsvRows(sheetConfig, requiredHeaders) {
+  const url = String(sheetConfig?.dataUrl || "").trim();
+  if (!url) return [];
+  const separator = url.includes("?") ? "&" : "?";
+  const response = await fetch(`${url}${separator}_=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Google Sheets returned ${response.status}.`);
+  return parseCsvRows(await response.text(),requiredHeaders);
+}
+
+async function loadKeyMessages() {
+  const sheetConfig = config.googleSheets?.keyMessages || {};
+  const rows = await fetchCsvRows(sheetConfig,["Key Messages","Link"]);
+  return rows.map(row => {
+    const title = rowValue(row,["Key Messages","Key Message","Title"]);
+    const documentLabel = rowValue(row,["Link","Document","File"]);
+    const sector = rowValue(row,["Sector","UNICEF Sector","UNICEF Unit"]) || inferSector(`${title} ${documentLabel}`);
+    const documentUrl = directUrl(rowValue(row,["URL","Web Link","Document URL"])) || directUrl(documentLabel);
+    return { title, documentLabel, sector, url: documentUrl || sheetConfig.sourceUrl, isDirect: Boolean(documentUrl) };
+  }).filter(item => item.title);
+}
+
+async function loadResponsePlans() {
+  const sheetConfig = config.googleSheets?.responsePlans || {};
+  const rows = await fetchCsvRows(sheetConfig,["Country","Response Plan"]);
+  return rows.map(row => {
+    const country = rowValue(row,["Country"]);
+    const plan = rowValue(row,["Response Plan","Plan"]);
+    const planUrl = directUrl(rowValue(row,["URL","Web Link","Plan URL"])) || directUrl(plan);
+    return { country, plan, url: planUrl || sheetConfig.sourceUrl, isDirect: Boolean(planUrl) };
+  }).filter(item => item.country);
+}
+
 async function loadLocalData() {
   const response = await fetch("data/activities.json", { cache: "no-store" });
   if (!response.ok) throw new Error("The demonstration data file could not be loaded.");
@@ -138,7 +208,7 @@ async function loadGoogleSheetsData() {
   const separator = url.includes("?") ? "&" : "?";
   const response = await fetch(`${url}${separator}_=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Google Sheets returned ${response.status}. Confirm that the sheet is shared with anyone who has the link.`);
-  return parseExcelData(await response.arrayBuffer(), { source: "Google Sheets", fileName: config.googleSheets?.displayName || "El Niño Activity Diary" });
+  return parseExcelData(await response.text(), { source: "Google Sheets", fileName: config.googleSheets?.displayName || "El Niño Activity Diary" });
 }
 
 async function refreshData() {
@@ -146,6 +216,16 @@ async function refreshData() {
   $("refresh-button").innerHTML = "<span>↻</span> Loading";
   try {
     allActivities = config.mode === "google-sheets" ? await loadGoogleSheetsData() : await loadLocalData();
+    if (config.mode === "google-sheets") {
+      const [messagesResult,plansResult] = await Promise.allSettled([loadKeyMessages(),loadResponsePlans()]);
+      keyMessages = messagesResult.status === "fulfilled" ? messagesResult.value : [];
+      responsePlans = plansResult.status === "fulfilled" ? plansResult.value : [];
+      metadata.auxiliaryWarnings = [messagesResult,plansResult].filter(result => result.status === "rejected").map(result => result.reason?.message || "A supporting sheet could not be loaded.");
+    } else {
+      keyMessages = [];
+      responsePlans = [];
+      metadata.auxiliaryWarnings = [];
+    }
     allActivities.sort((a,b) => new Date(a["Activity Date*"]) - new Date(b["Activity Date*"]));
     $("demo-banner").classList.toggle("hidden", !metadata.isDemo);
     $("sync-state").classList.toggle("live", !metadata.isDemo);
@@ -155,7 +235,7 @@ async function refreshData() {
     $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Google Sheet";
     populateFilters(); applyFilters();
     $("last-refreshed").textContent = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    showToast(`${allActivities.length} activities loaded.`);
+    showToast(`${allActivities.length} activities, ${keyMessages.length} key messages and ${responsePlans.length} response-plan rows loaded.`);
     return true;
   } catch (error) {
     showToast(error.message || "Data refresh failed.");
@@ -190,15 +270,24 @@ function populateFilters() {
   const currentReportCountry = $("sitrep-country").value;
   $("sitrep-country").innerHTML = `<option value="">All countries</option>` + countries.map(country => `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`).join("");
   $("sitrep-country").value = countries.includes(currentReportCountry) ? currentReportCountry : "";
+  const activityDates = allActivities.map(row => row["Activity Date*"]).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
+  if (activityDates.length) {
+    ["activity-start-filter","activity-end-filter"].forEach(id => {
+      $(id).min = activityDates[0];
+      $(id).max = activityDates[activityDates.length - 1];
+    });
+  }
 }
 
 function applyFilters() {
   const search = $("search-filter").value.trim().toLowerCase();
   const unit = $("unit-filter").value, country = $("country-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
+  const activityStart = $("activity-start-filter").value, activityEnd = $("activity-end-filter").value;
   if ($("sitrep-country") && $("sitrep-country").value !== country) $("sitrep-country").value = country;
   filteredActivities = allActivities.filter(d => {
     const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
+    const activityDate = d["Activity Date*"] || "";
+    return (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!country || d["Country*"] === country) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status) && (!activityStart || activityDate >= activityStart) && (!activityEnd || activityDate <= activityEnd);
   });
   renderAll();
 }
@@ -357,6 +446,43 @@ function renderMap() {
   const countries = group("Country*");
   $("map-count").textContent = `${countries.length} mapped ${countries.length === 1 ? "location" : "locations"}`;
   $("map-country-list").innerHTML = countries.map(([name,count]) => `<div class="country-row"><span>${escapeHtml(name)}</span><strong>${count}</strong></div>`).join("");
+  renderResponsePlans();
+}
+
+function renderResponsePlans() {
+  const container = $("map-response-plans");
+  const selectedCountry = $("country-filter").value;
+  if (!selectedCountry) {
+    container.innerHTML = `<p class="supporting-empty">Select one country above to see its response plan.</p>`;
+    return;
+  }
+  const matches = responsePlans.filter(item => canonicalHeader(item.country) === canonicalHeader(selectedCountry));
+  if (!matches.length) {
+    container.innerHTML = `<p class="supporting-empty">No response-plan row is available for ${escapeHtml(selectedCountry)}.</p>`;
+    return;
+  }
+  const available = matches.filter(item => item.plan);
+  if (!available.length) {
+    container.innerHTML = `<p class="supporting-empty">${escapeHtml(selectedCountry)} is listed, but its response plan has not yet been added.</p>`;
+    return;
+  }
+  container.innerHTML = available.map(item => `<article class="response-plan-card"><strong>${escapeHtml(item.plan)}</strong><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${item.isDirect ? "Open response plan" : "Open response-plan sheet"} ↗</a></article>`).join("");
+}
+
+function renderKeyMessages() {
+  const selectedSector = $("unit-filter").value;
+  const rows = keyMessages.filter(item => !selectedSector || canonicalHeader(item.sector) === canonicalHeader(selectedSector));
+  const warning = metadata.auxiliaryWarnings?.length ? ` ${metadata.auxiliaryWarnings.join(" ")}` : "";
+  $("key-message-status").textContent = `${rows.length} ${rows.length === 1 ? "resource" : "resources"} shown from the live Key Messages tab.${warning}`;
+  if (!rows.length) {
+    $("key-messages-groups").innerHTML = `<div class="empty-state">No key messages match the selected UNICEF Sector.</div>`;
+    return;
+  }
+  const groups = [...new Set(rows.map(item => item.sector || "Cross-sector / General"))].sort();
+  $("key-messages-groups").innerHTML = groups.map(sector => {
+    const messages = rows.filter(item => (item.sector || "Cross-sector / General") === sector);
+    return `<section class="key-message-sector" style="--sector-color:${sectorColor(sector)}"><header><div><p>UNICEF SECTOR</p><h3>${escapeHtml(sector)}</h3></div><span>${messages.length} ${messages.length === 1 ? "resource" : "resources"}</span></header><div class="key-message-grid">${messages.map(item => `<article class="key-message-card"><div><span class="key-message-type">KEY MESSAGE RESOURCE</span><h4>${escapeHtml(item.title)}</h4>${item.documentLabel ? `<p>${escapeHtml(item.documentLabel)}</p>` : ""}</div><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${item.isDirect ? "Open resource" : "Open source sheet"} ↗</a></article>`).join("")}</div></section>`;
+  }).join("");
 }
 
 function renderRegister() {
@@ -364,13 +490,7 @@ function renderRegister() {
 }
 
 function sitrepFilterRows() {
-  const search = $("search-filter").value.trim().toLowerCase();
-  const unit = $("unit-filter").value, phase = $("phase-filter").value, status = $("status-filter").value;
-  const country = $("sitrep-country").value;
-  return allActivities.filter(d => {
-    const haystack = FIELD_ORDER.map(field => d[field]).join(" ").toLowerCase();
-    return (!country || d["Country*"] === country) && (!search || haystack.includes(search)) && (!unit || d["UNICEF Unit*"] === unit) && (!phase || d["El Niño Phase*"] === phase) && (!status || d["Implementation Status*"] === status);
-  });
+  return [...filteredActivities];
 }
 
 function uniqueNarratives(rows, field, limit = 2) {
@@ -480,7 +600,7 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderSitrep();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderKeyMessages(); renderSitrep();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
@@ -492,8 +612,8 @@ function showToast(message) { const toast = $("toast"); toast.textContent = mess
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click",()=>switchView(tab.dataset.view)));
 document.querySelectorAll("[data-go-view]").forEach(button => button.addEventListener("click",()=>switchView(button.dataset.goView)));
-["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
-$("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter"].forEach(id=>$(id).value=""); applyFilters(); });
+["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
+$("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id=>$(id).value=""); applyFilters(); });
 $("refresh-button").addEventListener("click",async()=>{
   await refreshData();
 });
