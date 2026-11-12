@@ -115,9 +115,9 @@ Because browsers block some local-file data loading, use a tiny local web server
 
     `https://YOUR-GITHUB-NAME.github.io/unicef-el-nino-diary/`
 
-At this point the site reads the configured live Google Sheet.
+At this point the site reads the configured live Sheet.
 
-## Part 3 — Live Google Sheet
+## Part 3 — Live Sheet
 
 The dashboard is already configured to read this workbook:
 
