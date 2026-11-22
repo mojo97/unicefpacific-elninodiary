@@ -566,16 +566,7 @@ function renderMap() {
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
     const hasDeclaration = emergencyDeclarations.some(item => sameCountry(item.country,d["Country*"]));
-    const marker = L.circleMarker([d.latitude, lng], {
-  radius: hasDeclaration ? 11 : 9,
-  color: "#fff",
-  weight: hasDeclaration ? 3 : 2,
-
-  // Red is used only when a declaration exists.
-  fillColor: hasDeclaration ? "#d71920" : "#27aae1",
-
-  fillOpacity: 0.95
-});
+    const marker = L.circleMarker([d.latitude,lng], { radius: hasDeclaration ? 11 : 9, color: "#fff", weight: hasDeclaration ? 3 : 2, fillColor: hasDeclaration ? "#d71920" : "#27aae1", fillOpacity: .95 });
     marker.bindPopup(`${hasDeclaration ? `<p class="map-popup-alert">Emergency/disaster declaration recorded</p>` : ""}<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
     marker.on("click",() => selectMapCountry(d["Country*"]));
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);

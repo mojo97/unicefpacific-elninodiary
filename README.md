@@ -10,7 +10,7 @@ The site reads five Google Sheet tabs whenever it loads and whenever **Refresh**
 - **Key Messages** (`gid=1470373217`): `Key Messages` and `Link`; an optional `Sector` column is supported. Without a Sector value, the site infers the sector from the resource title or filename.
 - **Response Plan** (`gid=542411509`): `Country` and `Response Plan Link`.
 - **UNICEF Sector Response Plan** (`gid=1281880942`): sector, country, indicator, priority activity/location/group, people in need, national and UNICEF targets, age/sex breakdown, non-person target, unit cost, total funding required, and notes.
-- **Emergency Declaration** (`gid=1366090099`): `Country`, `Date` and `Source`. On the Map page, declared countries receive a badge; selecting a country shows the recorded declaration date and opens its source link.
+- **Emergency Declaration** (`gid=1366090099`): `Country`, `Date` and `Source`. On the Map page, declared countries receive a red marker and badge; all non-declared activity markers use UNICEF blue. Selecting a country shows the recorded declaration date and opens its source link.
 
 The `Link` and `Response Plan Link` cells may contain either a full `https://...` address or a Google Sheets hyperlink/smart chip. The site reads the cell's actual document link and never redirects these buttons to the source Google Sheet.
 
