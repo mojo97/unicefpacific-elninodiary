@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261122-23">
+  <link rel="stylesheet" href="styles.css?v=20261122-25">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -107,6 +107,17 @@
         <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">SECTOR VIEW</p><h3>Funding required by sector</h3></div></div><div id="plan-sector-funding" class="plan-bars"></div></article>
         <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">COUNTRY VIEW</p><h3>Funding required by country</h3></div></div><div id="plan-country-funding" class="plan-bars"></div></article>
       </div>
+      <section class="plan-pivot-card" aria-labelledby="plan-pivot-title">
+        <div class="plan-pivot-heading">
+          <div><p class="section-kicker">INTERACTIVE PIVOT</p><h3 id="plan-pivot-title">Compare response-plan details</h3><p>Change the row, column and measure to examine funding and targets from different angles.</p></div>
+          <div class="plan-pivot-controls">
+            <label><span>Rows</span><select id="plan-pivot-row"><option value="country">Country</option><option value="sector">Sector</option><option value="indicator">Indicator</option></select></label>
+            <label><span>Columns</span><select id="plan-pivot-column"><option value="sector">Sector</option><option value="country">Country</option><option value="indicator">Indicator</option></select></label>
+            <label><span>Measure</span><select id="plan-pivot-value"><option value="funding">Funding required</option><option value="target">People targeted</option><option value="need">People in need</option><option value="records">Number of records</option></select></label>
+          </div>
+        </div>
+        <div id="plan-pivot" class="plan-pivot-scroll" aria-live="polite"></div>
+      </section>
       <div class="plan-section-heading"><div><p class="section-kicker">INDICATOR PLANS</p><h3>Priority interventions and resource requirements</h3></div><span id="plan-record-count"></span></div>
       <div id="sector-plan-cards" class="sector-plan-groups" aria-live="polite"></div>
     </section>
@@ -140,9 +151,9 @@
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20261122-23"></script>
+  <script src="config.js?v=20261122-25"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261122-23"></script>
+  <script src="app.js?v=20261122-25"></script>
 </body>
 </html>

@@ -43,6 +43,10 @@ const $ = (id) => document.getElementById(id);
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const fmtUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const fmtDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const formatDateValue = value => {
+  const date = new Date(value);
+  return !value || Number.isNaN(date.getTime()) ? "Not reported" : fmtDate.format(date);
+};
 const escapeHtml = (value) => String(value ?? "—").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const phaseColor = (phase) => PHASE_COLORS[phase] || "#91a6af";
 const sectorColor = sector => {
@@ -75,6 +79,7 @@ function excelDate(value) {
 function normalizeActivity(raw) {
   const activity = {};
   FIELD_ORDER.forEach(field => { activity[field] = raw[field] ?? ""; });
+  activity["Entry ID"] = String(activity["Entry ID"] ?? "").trim();
   activity["Activity Date*"] = excelDate(activity["Activity Date*"]);
   activity["Submission Date*"] = excelDate(activity["Submission Date*"]);
   activity["People Reached (Total)"] = Number(activity["People Reached (Total)"]) || 0;
@@ -533,9 +538,7 @@ function renderFollowup() {
   const challenges = filteredActivities.filter(d => d["Challenges"]).length;
   const nextSteps = filteredActivities.filter(d => d["Next Step"]).length;
   const evidence = filteredActivities.filter(d => /^https?:\/\//.test(d["Evidence Link"])).length;
-  const lags = filteredActivities.map(d => (new Date(d["Submission Date*"]) - new Date(d["Activity Date*"])) / 86400000).filter(Number.isFinite);
-  const avgLag = lags.length ? Math.round(lags.reduce((a,b)=>a+b,0)/lags.length) : 0;
-  const items = [["↗",`${ongoing} still active`,"Ongoing, planned or on-hold activities"],["!",`${challenges} challenges logged`,"Constraints needing management attention"],["→",`${nextSteps} next steps`,"Forward actions documented"],["✓",`${evidence}/${filteredActivities.length} evidence links`,"Records with a supporting URL"],["◷",`${avgLag} day submission lag`,"Average time from activity to submission"]];
+  const items = [["↗",`${ongoing} still active`,"Ongoing, planned or on-hold activities"],["!",`${challenges} challenges logged`,"Constraints needing management attention"],["→",`${nextSteps} next steps`,"Forward actions documented"],["✓",`${evidence}/${filteredActivities.length} evidence links`,"Records with a supporting URL"]];
   $("followup-list").innerHTML = items.map(([icon,title,text]) => `<div class="followup-item"><span class="followup-icon">${icon}</span><div><strong>${title}</strong><p>${text}</p></div></div>`).join("");
 }
 
@@ -691,6 +694,37 @@ function planMetric(value,empty = "Not reported") {
   return value === null ? empty : fmtNum.format(value);
 }
 
+function renderPlanPivot(rows) {
+  const rowField = $("plan-pivot-row").value;
+  const columnField = $("plan-pivot-column").value;
+  const measure = $("plan-pivot-value").value;
+  const label = { country: "Country", sector: "Sector", indicator: "Indicator" };
+  const rowLabels = [...new Set(rows.map(item => item[rowField] || "Not reported"))].sort();
+  const columnLabels = [...new Set(rows.map(item => item[columnField] || "Not reported"))].sort();
+  const metric = item => {
+    if (measure === "records") return { value: 1, valid: true };
+    if (measure === "funding") return { value: item.fundingRequired || 0, valid: item.fundingRequired !== null };
+    if (measure === "target") return { value: item.peopleTargeted || 0, valid: item.peopleTargeted !== null };
+    return { value: item.peopleInNeed || 0, valid: item.peopleInNeed !== null };
+  };
+  const format = value => measure === "funding" ? fmtUSD.format(value) : fmtNum.format(value);
+  const cell = (rowLabel,columnLabel) => {
+    const matches = rows.filter(item => (item[rowField] || "Not reported") === rowLabel && (item[columnField] || "Not reported") === columnLabel);
+    return matches.reduce((total,item) => { const current = metric(item); total.value += current.value; total.reported += current.valid ? 1 : 0; return total; }, { value: 0, reported: 0 });
+  };
+  const matrix = rowLabels.map(rowLabel => ({ rowLabel, cells: columnLabels.map(columnLabel => cell(rowLabel,columnLabel)) }));
+  const max = Math.max(1,...matrix.flatMap(row => row.cells.map(item => item.value)));
+  if (!rowLabels.length || !columnLabels.length) {
+    $("plan-pivot").innerHTML = `<div class="empty-state">No response-plan data match the current filters.</div>`;
+    return;
+  }
+  const columnTotals = columnLabels.map((_,index) => matrix.reduce((total,row) => ({ value: total.value + row.cells[index].value, reported: total.reported + row.cells[index].reported }), { value: 0, reported: 0 }));
+  $("plan-pivot").innerHTML = `<table class="plan-pivot-table"><thead><tr><th>${label[rowField]} / ${label[columnField]}</th>${columnLabels.map(value => `<th>${escapeHtml(value)}</th>`).join("")}<th>Total</th></tr></thead><tbody>${matrix.map(row => {
+    const rowTotal = row.cells.reduce((total,item) => ({ value: total.value + item.value, reported: total.reported + item.reported }), { value: 0, reported: 0 });
+    return `<tr><th>${escapeHtml(row.rowLabel)}</th>${row.cells.map(item => `<td style="--heat:${item.reported ? Math.max(.08,item.value/max) : 0}"><strong>${item.reported ? format(item.value) : "—"}</strong></td>`).join("")}<td class="pivot-total"><strong>${rowTotal.reported ? format(rowTotal.value) : "—"}</strong></td></tr>`;
+  }).join("")}</tbody><tfoot><tr><th>Total</th>${columnTotals.map(item => `<td><strong>${item.reported ? format(item.value) : "—"}</strong></td>`).join("")}<td><strong>${format(columnTotals.reduce((sum,item) => sum + item.value,0))}</strong></td></tr></tfoot></table>`;
+}
+
 function renderSectorPlan() {
   const rows = filteredSectorPlans();
   const totalFunding = rows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
@@ -707,6 +741,7 @@ function renderSectorPlan() {
   ].map(([label,value,note],index) => `<article class="plan-kpi ${index === 2 ? "accent" : ""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
   renderPlanBars("plan-sector-funding",rows,"sector");
   renderPlanBars("plan-country-funding",rows,"country");
+  renderPlanPivot(rows);
 
   if (!rows.length) {
     $("sector-plan-cards").innerHTML = `<div class="empty-state">No response-plan records match these filters.</div>`;
@@ -723,14 +758,18 @@ function renderSectorPlan() {
         const targetLabel = item.peopleTargeted !== null ? "People targeted" : (item.targetUnit || "Non-person target");
         const targetValue = item.peopleTargeted !== null ? item.peopleTargeted : item.nonPersonTarget;
         const demographics = [["Girls 0–18",item.girls],["Boys 0–18",item.boys],["Women 18+",item.women],["Men 18+",item.men],["Sex/age unknown",item.unknown]].filter(([,value]) => value !== null);
-        return `<article class="sector-plan-card">
+        const detailsId = `plan-details-${item.id}`;
+        return `<article class="sector-plan-card compact">
           <div class="plan-card-top"><span class="plan-country">${escapeHtml(item.country)}</span><span class="plan-funding ${item.fundingRequired === null ? "missing" : ""}">${item.fundingRequired === null ? "Funding not reported" : fmtUSD.format(item.fundingRequired)}</span></div>
           <h4>${escapeHtml(item.indicator || "Indicator not reported")}</h4>
-          <div class="plan-card-metrics"><div><strong>${planMetric(targetValue)}</strong><span>${escapeHtml(targetLabel)}</span></div><div><strong>${planMetric(item.peopleInNeed)}</strong><span>People in need</span></div><div><strong>${planMetric(item.nationalTarget)}</strong><span>National target</span></div></div>
-          <div class="plan-card-section"><span>Priority activity</span><p>${escapeHtml(item.activity || "Not reported")}</p></div>
-          <div class="plan-context-grid"><div><span>Priority locations</span><p>${escapeHtml(item.locations || "Not reported")}</p></div><div><span>Priority groups</span><p>${escapeHtml(item.groups || "Not reported")}</p></div></div>
-          ${demographics.length ? `<div class="demographic-strip">${demographics.map(([label,value]) => `<div><strong>${fmtNum.format(value)}</strong><span>${label}</span></div>`).join("")}</div>` : ""}
-          <footer><span>${item.unitCost === null ? "Unit cost not reported" : `${fmtUSD.format(item.unitCost)} per unit`}</span>${item.notes ? `<span title="${escapeHtml(item.notes)}">Notes available</span>` : ""}</footer>
+          <div class="plan-card-summary"><div><strong>${planMetric(targetValue)}</strong><span>${escapeHtml(targetLabel)}</span></div><p>${escapeHtml(item.activity || "Priority activity not reported")}</p></div>
+          <button class="plan-view-more" data-plan-toggle="${escapeHtml(detailsId)}" type="button" aria-expanded="false">View more</button>
+          <div class="plan-card-details hidden" id="${escapeHtml(detailsId)}">
+            <div class="plan-card-metrics"><div><strong>${planMetric(item.peopleInNeed)}</strong><span>People in need</span></div><div><strong>${planMetric(item.nationalTarget)}</strong><span>National target</span></div><div><strong>${item.unitCost === null ? "—" : fmtUSD.format(item.unitCost)}</strong><span>Unit cost</span></div></div>
+            <div class="plan-context-grid"><div><span>Priority locations</span><p>${escapeHtml(item.locations || "Not reported")}</p></div><div><span>Priority groups</span><p>${escapeHtml(item.groups || "Not reported")}</p></div></div>
+            ${demographics.length ? `<div class="demographic-strip">${demographics.map(([label,value]) => `<div><strong>${fmtNum.format(value)}</strong><span>${label}</span></div>`).join("")}</div>` : ""}
+            ${item.notes ? `<div class="plan-card-notes"><span>Notes</span><p>${escapeHtml(item.notes)}</p></div>` : ""}
+          </div>
         </article>`;
       }).join("")}</div>
     </section>`;
@@ -836,13 +875,14 @@ function detailItem(label, value, full = false, format) {
   return `<div class="detail-item ${full ? "full" : ""}"><span>${label}</span><p>${shown}</p></div>`;
 }
 function openDetail(entryId) {
-  const d = allActivities.find(row => row["Entry ID"] === entryId); if (!d) return;
+  const key = String(entryId ?? "").trim();
+  const d = allActivities.find(row => String(row["Entry ID"] ?? "").trim() === key); if (!d) { showToast("This activity record could not be opened."); return; }
   const evidence = metadata.isDemo ? escapeHtml(d["Evidence Link"] || "Not reported") + " (illustrative link)" : (/^https?:\/\//.test(d["Evidence Link"]) ? `<a class="detail-link" href="${escapeHtml(d["Evidence Link"])}" target="_blank" rel="noopener">Open supporting evidence ↗</a>` : "Not reported");
-  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${fmtDate.format(new Date(d["Activity Date*"]))} · ${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
-    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,v=>fmtDate.format(new Date(v)))}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF Unit*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
+  $("dialog-content").innerHTML = `<header class="dialog-title"><p class="section-kicker">${escapeHtml(d["Entry ID"])}</p><h2>${escapeHtml(d["Activity Title*"])}</h2><p>${formatDateValue(d["Activity Date*"])} · ${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Country*"])}</p></header><div class="detail-groups">
+    <section class="detail-group"><h3>System & classification</h3><div class="detail-grid">${detailItem("Entry ID",d["Entry ID"])}${detailItem("Activity date",d["Activity Date*"],false,formatDateValue)}${detailItem("Reporting month",d["Reporting Month"])}${detailItem("UNICEF sector",d["UNICEF Unit*"])}${detailItem("Country",d["Country*"])}${detailItem("Location / admin area",d["Location / Admin Area"])}${detailItem("El Niño phase",d["El Niño Phase*"])}${detailItem("Activity type",d["Activity Type*"])}${detailItem("Implementation status",d["Implementation Status*"])}</div></section>
     <section class="detail-group"><h3>Results & delivery</h3><div class="detail-grid">${detailItem(`People ${reachMode([d])}`,d["People Reached (Total)"],false,v=>fmtNum.format(v))}${detailItem(`Children ${reachMode([d])}`,d["Children Reached"],false,v=>fmtNum.format(v))}${detailItem(`Funding ${fundingMode([d])}`,d["Funding Used (USD)"],false,v=>fmtUSD.format(v))}${detailItem("Partners",d["Partners"],true)}${detailItem("Result / output",d["Result / Output"],true)}</div></section>
     <section class="detail-group full"><h3>Activity narrative</h3><div class="detail-grid">${detailItem("Activity title",d["Activity Title*"],true)}${detailItem("What was done?",d["What Was Done?*"],true)}</div></section>
-    <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,v=>fmtDate.format(new Date(v)))}</div></section>
+    <section class="detail-group full"><h3>Follow-up & evidence</h3><div class="detail-grid">${detailItem("Challenges",d["Challenges"],true)}${detailItem("Next step",d["Next Step"],true)}${detailItem("Evidence link",evidence,true,v=>v)}${detailItem("Focal point",d["Focal Point*"])}${detailItem("Submission date",d["Submission Date*"],false,formatDateValue)}</div></section>
   </div>`;
   $("activity-dialog").showModal();
 }
@@ -869,6 +909,12 @@ document.querySelectorAll("[data-activity-layout]").forEach(button => button.add
 }));
 ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
 ['plan-sector-filter','plan-country-filter','plan-indicator-filter','plan-funding-filter'].forEach(id => $(id).addEventListener('change',renderSectorPlan));
+['plan-pivot-row','plan-pivot-column','plan-pivot-value'].forEach(id => $(id).addEventListener('change',()=>{
+  if ($("plan-pivot-row").value === $("plan-pivot-column").value) {
+    $("plan-pivot-column").value = $("plan-pivot-row").value === "country" ? "sector" : "country";
+  }
+  renderSectorPlan();
+}));
 $("plan-clear-filters").addEventListener("click",()=>{ ['plan-sector-filter','plan-country-filter','plan-indicator-filter','plan-funding-filter'].forEach(id => $(id).value = ""); renderSectorPlan(); });
 $("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id=>$(id).value=""); applyFilters(); });
 $("refresh-button").addEventListener("click",async()=>{
@@ -882,6 +928,17 @@ $("sitrep-print").addEventListener("click",()=>window.print());
 $("dialog-close").addEventListener("click",()=>$("activity-dialog").close());
 $("activity-dialog").addEventListener("click",e=>{ if(e.target === $("activity-dialog")) $("activity-dialog").close(); });
 document.body.addEventListener("click",e=>{
+  const planToggle = e.target.closest("[data-plan-toggle]");
+  if (planToggle) {
+    const details = $(planToggle.dataset.planToggle);
+    if (details) {
+      const expanded = planToggle.getAttribute("aria-expanded") === "true";
+      planToggle.setAttribute("aria-expanded",String(!expanded));
+      planToggle.textContent = expanded ? "View more" : "Show less";
+      details.classList.toggle("hidden",expanded);
+    }
+    return;
+  }
   const countryTarget = e.target.closest("[data-map-country]");
   if (countryTarget) {
     $("country-filter").value = countryTarget.dataset.mapCountry;

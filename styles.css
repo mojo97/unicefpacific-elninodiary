@@ -169,13 +169,26 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .sector-plan-group > header h3 { margin: 2px 0 0; font: 800 21px Manrope,sans-serif; }
 .sector-plan-group > header > div:last-child { text-align: right; }
 .sector-plan-group > header strong { display: block; color: var(--navy); font: 800 19px Manrope,sans-serif; }
-.sector-plan-card-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 16px; }
+.sector-plan-card-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; padding: 14px; }
 .sector-plan-card { min-width: 0; overflow: hidden; padding: 17px; border: 1px solid #d9e5e9; border-radius: 15px; background: linear-gradient(180deg,#fff,#fbfdfd); }
+.sector-plan-card.compact { display: flex; flex-direction: column; padding: 14px; }
 .plan-card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .plan-country { padding: 5px 8px; border-radius: 7px; color: var(--navy); background: #dcf5f8; font-size: 10px; font-weight: 800; }
 .plan-funding { color: #13744d; font-size: 11px; font-weight: 800; }
 .plan-funding.missing { color: #a45149; }
-.sector-plan-card h4 { margin: 12px 0 14px; color: var(--navy); font: 800 16px/1.4 Manrope,sans-serif; }
+.sector-plan-card h4 { margin: 10px 0; color: var(--navy); font: 800 15px/1.35 Manrope,sans-serif; }
+.plan-card-summary { display: grid; grid-template-columns: minmax(92px,.35fr) 1fr; gap: 10px; align-items: stretch; }
+.plan-card-summary > div { padding: 10px; border-radius: 10px; background: #eef6f8; }
+.plan-card-summary strong,.plan-card-summary span { display: block; }
+.plan-card-summary strong { color: var(--navy); font: 800 16px Manrope,sans-serif; }
+.plan-card-summary span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.plan-card-summary p { display: -webkit-box; overflow: hidden; margin: 0; padding: 9px 10px; color: #405964; border-left: 3px solid var(--sector-color); background: #f7f9fa; font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.plan-view-more { align-self: flex-start; margin-top: 10px; padding: 7px 10px; border: 1px solid #aad5e5; border-radius: 8px; color: #006b98; background: #eef9fc; font-size: 11px; font-weight: 800; }
+.plan-view-more:hover { color: #fff; border-color: var(--blue); background: var(--blue); }
+.plan-card-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1eaed; }
+.plan-card-notes { margin-top: 10px; padding: 10px; border-radius: 9px; background: #fff8e7; }
+.plan-card-notes span { color: #9a6200; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.plan-card-notes p { margin: 4px 0 0; color: #5e5338; font-size: 11px; line-height: 1.45; }
 .plan-card-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
 .plan-card-metrics div { min-width: 0; padding: 10px; border-radius: 10px; background: #f0f6f8; }
 .plan-card-metrics strong,.plan-card-metrics span { display: block; }
@@ -192,6 +205,22 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .demographic-strip strong { color: var(--navy); font-size: 12px; }
 .demographic-strip span { margin-top: 2px; color: var(--muted); font-size: 8px; }
 .sector-plan-card footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e4ecef; color: var(--muted); font-size: 9px; }
+.plan-pivot-card { margin-bottom: 22px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
+.plan-pivot-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg,#f7fbfc,#edf8fb); }
+.plan-pivot-heading h3 { margin: 3px 0 4px; font: 800 20px Manrope,sans-serif; }
+.plan-pivot-heading p:not(.section-kicker) { margin: 0; color: var(--muted); font-size: 12px; }
+.plan-pivot-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-pivot-controls label > span { display: block; margin: 0 0 4px 3px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.plan-pivot-controls select { min-width: 135px; height: 38px; padding: 0 28px 0 10px; border: 1px solid #c9dce3; border-radius: 9px; color: var(--navy); background: #fff; font-size: 12px; font-weight: 700; }
+.plan-pivot-scroll { max-height: 520px; overflow: auto; }
+.plan-pivot-table { width: 100%; min-width: 760px; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+.plan-pivot-table th,.plan-pivot-table td { min-width: 110px; padding: 10px 11px; border-right: 1px solid #e5edef; border-bottom: 1px solid #e5edef; text-align: right; }
+.plan-pivot-table thead th { position: sticky; top: 0; z-index: 2; color: #fff; background: #0b4059; font-weight: 800; text-align: center; }
+.plan-pivot-table thead th:first-child { left: 0; z-index: 3; text-align: left; }
+.plan-pivot-table tbody th,.plan-pivot-table tfoot th { position: sticky; left: 0; z-index: 1; max-width: 260px; color: var(--navy); background: #f6fafb; text-align: left; }
+.plan-pivot-table tbody td { background: rgba(0,141,201,calc(var(--heat) * .62)); }
+.plan-pivot-table tbody td strong { color: var(--navy); }
+.plan-pivot-table .pivot-total,.plan-pivot-table tfoot td,.plan-pivot-table tfoot th { color: var(--navy); background: #e7f5f8; font-weight: 900; }
 
 .map-layout { display: grid; grid-template-columns: minmax(0,1fr) 290px; min-height: 600px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); }
 #map-canvas { min-height: 600px; background: #dcecf1; z-index: 1; }
@@ -380,6 +409,9 @@ dialog::backdrop { background: rgba(4,20,31,.68); backdrop-filter: blur(3px); }
   .plan-hero { align-items: flex-start; flex-direction: column; padding: 23px; }
   .plan-hero-mark { justify-items: start; text-align: left; }
   .plan-filter-bar,.plan-chart-grid,.sector-plan-card-grid { grid-template-columns: 1fr; }
+  .plan-pivot-heading { align-items: stretch; flex-direction: column; }
+  .plan-pivot-controls { display: grid; grid-template-columns: 1fr; }
+  .plan-pivot-controls select { width: 100%; }
   .plan-indicator-filter { grid-column: auto; }
   .activity-explorer-toolbar { align-items: flex-start; flex-direction: column; }
   .segmented-control { width: 100%; }

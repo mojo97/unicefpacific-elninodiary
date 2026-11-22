@@ -20,7 +20,7 @@ Use **Activity date from** and **Activity date to** for an inclusive date range.
 
 ## UNICEF response plan
 
-Open **UNICEF response plan** to analyse the live sector plan by sector, country, indicator and funding-data availability. The page shows combined indicator targets, funding requirements, funding-data coverage, comparisons by sector and country, and a detailed card for every matching indicator. Missing funding values are labelled **Not reported** rather than treated as zero. Because indicator targets may refer to overlapping people, the combined target is not a unique-beneficiary count.
+Open **UNICEF response plan** to analyse the live sector plan by sector, country, indicator and funding-data availability. The page shows combined indicator targets, funding requirements, funding-data coverage, comparisons by sector and country, and a compact card for every matching indicator. Select **View more** on a card for locations, priority groups, national targets, demographic breakdowns, unit cost and notes. The interactive pivot can switch its rows, columns and measure between country, sector, indicator, funding, targets, people in need and record counts. Missing funding values are labelled **Not reported** rather than treated as zero. Because indicator targets may refer to overlapping people, the combined target is not a unique-beneficiary count.
 
 The header now includes the UNICEF logo. Use of the UNICEF name and logo should remain limited to an authorised UNICEF deployment and follow current organisational brand guidance.
 
