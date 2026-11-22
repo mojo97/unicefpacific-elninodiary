@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261122-25">
+  <link rel="stylesheet" href="styles.css?v=20261122-26">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -118,7 +118,7 @@
         </div>
         <div id="plan-pivot" class="plan-pivot-scroll" aria-live="polite"></div>
       </section>
-      <div class="plan-section-heading"><div><p class="section-kicker">INDICATOR PLANS</p><h3>Priority interventions and resource requirements</h3></div><span id="plan-record-count"></span></div>
+      <div class="plan-section-heading"><div><p class="section-kicker">INDICATOR PLANS</p><h3>Priority interventions and resource requirements</h3></div><div class="plan-group-control"><label><span>Organize table by</span><select id="plan-group-by"><option value="sector">Sector, then country</option><option value="country">Country, then sector</option></select></label><strong id="plan-record-count"></strong></div></div>
       <div id="sector-plan-cards" class="sector-plan-groups" aria-live="polite"></div>
     </section>
 
@@ -151,9 +151,9 @@
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20261122-25"></script>
+  <script src="config.js?v=20261122-26"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261122-25"></script>
+  <script src="app.js?v=20261122-26"></script>
 </body>
 </html>

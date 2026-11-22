@@ -725,6 +725,43 @@ function renderPlanPivot(rows) {
   }).join("")}</tbody><tfoot><tr><th>Total</th>${columnTotals.map(item => `<td><strong>${item.reported ? format(item.value) : "—"}</strong></td>`).join("")}<td><strong>${format(columnTotals.reduce((sum,item) => sum + item.value,0))}</strong></td></tr></tfoot></table>`;
 }
 
+function planFundingSummary(rows) {
+  const reported = rows.filter(item => item.fundingRequired !== null);
+  return reported.length ? fmtUSD.format(reported.reduce((sum,item) => sum + item.fundingRequired,0)) : "Not reported";
+}
+
+function planSexAge(item) {
+  const values = [["Girls",item.girls],["Boys",item.boys],["Women",item.women],["Men",item.men],["Unknown",item.unknown]].filter(([,value]) => value !== null);
+  return values.length ? `<div class="plan-sadd">${values.map(([label,value]) => `<span><b>${fmtNum.format(value)}</b>${label}</span>`).join("")}</div>` : `<span class="plan-not-reported">Not reported</span>`;
+}
+
+function renderPlanTable(rows) {
+  return `<div class="plan-table-scroll"><table class="plan-record-table"><thead><tr><th>Indicator</th><th>Target</th><th>Sex and age</th><th>Funding required</th><th>Details</th></tr></thead><tbody>${rows.map(item => {
+    const targetLabel = item.peopleTargeted !== null ? "People targeted" : (item.targetUnit || "Non-person target");
+    const targetValue = item.peopleTargeted !== null ? item.peopleTargeted : item.nonPersonTarget;
+    const detailsId = `plan-details-${item.id}`;
+    return `<tr class="plan-record-row"><td><strong>${escapeHtml(item.indicator || "Indicator not reported")}</strong></td><td><b>${planMetric(targetValue)}</b><span>${escapeHtml(targetLabel)}</span></td><td>${planSexAge(item)}</td><td><b class="${item.fundingRequired === null ? "missing" : ""}">${item.fundingRequired === null ? "Not reported" : fmtUSD.format(item.fundingRequired)}</b></td><td><button class="plan-view-more" data-plan-toggle="${escapeHtml(detailsId)}" type="button" aria-expanded="false">View more</button></td></tr><tr class="plan-expanded-row hidden" id="${escapeHtml(detailsId)}"><td colspan="5"><div class="plan-expanded-content"><div class="plan-expanded-primary"><span>Priority activity</span><p>${escapeHtml(item.activity || "Not reported")}</p></div><div><span>Priority locations</span><p>${escapeHtml(item.locations || "Not reported")}</p></div><div><span>Priority groups</span><p>${escapeHtml(item.groups || "Not reported")}</p></div><div><span>People in need</span><p>${planMetric(item.peopleInNeed)}</p></div><div><span>National target</span><p>${planMetric(item.nationalTarget)}</p></div><div><span>Unit cost</span><p>${item.unitCost === null ? "Not reported" : fmtUSD.format(item.unitCost)}</p></div>${item.notes ? `<div class="plan-expanded-notes"><span>Notes</span><p>${escapeHtml(item.notes)}</p></div>` : ""}</div></td></tr>`;
+  }).join("")}</tbody></table></div>`;
+}
+
+function renderPlanHierarchy(rows) {
+  const primaryField = $("plan-group-by").value;
+  const secondaryField = primaryField === "sector" ? "country" : "sector";
+  const primaryLabel = primaryField === "sector" ? "UNICEF sector" : "Country";
+  const secondaryLabel = secondaryField === "sector" ? "UNICEF sector" : "Country";
+  const primaryGroups = [...new Set(rows.map(item => item[primaryField] || "Not reported"))].sort();
+  return primaryGroups.map((primary,index) => {
+    const primaryRows = rows.filter(item => (item[primaryField] || "Not reported") === primary);
+    const secondaryGroups = [...new Set(primaryRows.map(item => item[secondaryField] || "Not reported"))].sort();
+    const color = primaryField === "sector" ? sectorColor(primary) : "#008dc9";
+    return `<details class="plan-hierarchy-primary" style="--group-color:${color}" ${index === 0 ? "open" : ""}><summary><div><span>${primaryLabel}</span><strong>${escapeHtml(primary)}</strong></div><div><b>${primaryRows.length} ${primaryRows.length === 1 ? "record" : "records"}</b><b>${planFundingSummary(primaryRows)}</b><i aria-hidden="true"></i></div></summary><div class="plan-hierarchy-children">${secondaryGroups.map(secondary => {
+      const secondaryRows = primaryRows.filter(item => (item[secondaryField] || "Not reported") === secondary);
+      const secondaryColor = secondaryField === "sector" ? sectorColor(secondary) : color;
+      return `<details class="plan-hierarchy-secondary" style="--child-color:${secondaryColor}"><summary><div><span>${secondaryLabel}</span><strong>${escapeHtml(secondary)}</strong></div><div><b>${secondaryRows.length}</b><b>${planFundingSummary(secondaryRows)}</b><i aria-hidden="true"></i></div></summary>${renderPlanTable(secondaryRows)}</details>`;
+    }).join("")}</div></details>`;
+  }).join("");
+}
+
 function renderSectorPlan() {
   const rows = filteredSectorPlans();
   const totalFunding = rows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
@@ -747,33 +784,7 @@ function renderSectorPlan() {
     $("sector-plan-cards").innerHTML = `<div class="empty-state">No response-plan records match these filters.</div>`;
     return;
   }
-  const sectors = [...new Set(rows.map(item => item.sector))].sort();
-  $("sector-plan-cards").innerHTML = sectors.map(sector => {
-    const sectorRows = rows.filter(item => item.sector === sector);
-    const sectorFunding = sectorRows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
-    const sectorFundingRows = sectorRows.filter(item => item.fundingRequired !== null).length;
-    return `<section class="sector-plan-group" style="--sector-color:${sectorColor(sector)}">
-      <header><div><span>UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><div><strong>${sectorFundingRows ? fmtUSD.format(sectorFunding) : "Not reported"}</strong><small>funding required</small></div></header>
-      <div class="sector-plan-card-grid">${sectorRows.map(item => {
-        const targetLabel = item.peopleTargeted !== null ? "People targeted" : (item.targetUnit || "Non-person target");
-        const targetValue = item.peopleTargeted !== null ? item.peopleTargeted : item.nonPersonTarget;
-        const demographics = [["Girls 0–18",item.girls],["Boys 0–18",item.boys],["Women 18+",item.women],["Men 18+",item.men],["Sex/age unknown",item.unknown]].filter(([,value]) => value !== null);
-        const detailsId = `plan-details-${item.id}`;
-        return `<article class="sector-plan-card compact">
-          <div class="plan-card-top"><span class="plan-country">${escapeHtml(item.country)}</span><span class="plan-funding ${item.fundingRequired === null ? "missing" : ""}">${item.fundingRequired === null ? "Funding not reported" : fmtUSD.format(item.fundingRequired)}</span></div>
-          <h4>${escapeHtml(item.indicator || "Indicator not reported")}</h4>
-          <div class="plan-card-summary"><div><strong>${planMetric(targetValue)}</strong><span>${escapeHtml(targetLabel)}</span></div><p>${escapeHtml(item.activity || "Priority activity not reported")}</p></div>
-          <button class="plan-view-more" data-plan-toggle="${escapeHtml(detailsId)}" type="button" aria-expanded="false">View more</button>
-          <div class="plan-card-details hidden" id="${escapeHtml(detailsId)}">
-            <div class="plan-card-metrics"><div><strong>${planMetric(item.peopleInNeed)}</strong><span>People in need</span></div><div><strong>${planMetric(item.nationalTarget)}</strong><span>National target</span></div><div><strong>${item.unitCost === null ? "—" : fmtUSD.format(item.unitCost)}</strong><span>Unit cost</span></div></div>
-            <div class="plan-context-grid"><div><span>Priority locations</span><p>${escapeHtml(item.locations || "Not reported")}</p></div><div><span>Priority groups</span><p>${escapeHtml(item.groups || "Not reported")}</p></div></div>
-            ${demographics.length ? `<div class="demographic-strip">${demographics.map(([label,value]) => `<div><strong>${fmtNum.format(value)}</strong><span>${label}</span></div>`).join("")}</div>` : ""}
-            ${item.notes ? `<div class="plan-card-notes"><span>Notes</span><p>${escapeHtml(item.notes)}</p></div>` : ""}
-          </div>
-        </article>`;
-      }).join("")}</div>
-    </section>`;
-  }).join("");
+  $("sector-plan-cards").innerHTML = renderPlanHierarchy(rows);
 }
 
 function sitrepFilterRows() {
@@ -915,6 +926,7 @@ document.querySelectorAll("[data-activity-layout]").forEach(button => button.add
   }
   renderSectorPlan();
 }));
+$("plan-group-by").addEventListener("change",renderSectorPlan);
 $("plan-clear-filters").addEventListener("click",()=>{ ['plan-sector-filter','plan-country-filter','plan-indicator-filter','plan-funding-filter'].forEach(id => $(id).value = ""); renderSectorPlan(); });
 $("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id=>$(id).value=""); applyFilters(); });
 $("refresh-button").addEventListener("click",async()=>{
