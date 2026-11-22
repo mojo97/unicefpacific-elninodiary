@@ -1,20 +1,26 @@
 # UNICEF Pacific El Niño Activity Diary
 
-This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a chronological activity timeline, a country-level map, live key-message resources, country response plans, a searchable register, a complete record view, and a print-ready country Situation Report.
+This is a static, GitHub Pages–ready dashboard for the UNICEF Pacific El Niño Activity Diary workbook. It provides an overview, management signals, monthly analysis, a combined timeline/register explorer, a country-level map, live key-message resources, country response plans, a UNICEF sector response-plan funding dashboard, a complete record view, and a print-ready country Situation Report.
 
 ## Live supporting tabs
 
-The site reads three Google Sheet tabs whenever it loads and whenever **Refresh** is selected:
+The site reads five Google Sheet tabs whenever it loads and whenever **Refresh** is selected:
 
 - **Activity Diary**: dashboard activities and Situation Report content.
 - **Key Messages** (`gid=1470373217`): `Key Messages` and `Link`; an optional `Sector` column is supported. Without a Sector value, the site infers the sector from the resource title or filename.
 - **Response Plan** (`gid=542411509`): `Country` and `Response Plan Link`.
+- **UNICEF Sector Response Plan** (`gid=1281880942`): sector, country, indicator, priority activity/location/group, people in need, national and UNICEF targets, age/sex breakdown, non-person target, unit cost, total funding required, and notes.
+- **Emergency Declaration** (`gid=1366090099`): `Country`, `Date` and `Source`. On the Map page, declared countries receive a badge; selecting a country shows the recorded declaration date and opens its source link.
 
 The `Link` and `Response Plan Link` cells may contain either a full `https://...` address or a Google Sheets hyperlink/smart chip. The site reads the cell's actual document link and never redirects these buttons to the source Google Sheet.
 
 ## Activity date range
 
-Use **Activity date from** and **Activity date to** for an inclusive date range. The range filters the Overview, Activity timeline, Map, Activity register and Situation Report. **Clear filters** resets both dates with the other dashboard filters.
+Use **Activity date from** and **Activity date to** for an inclusive date range. The range filters the Overview, Activity timeline, Map and Situation Report. **Clear filters** resets both dates with the other dashboard filters. On **Activity timeline**, use the **Timeline / Register** switch to move between the chronological narrative and the full audit table without changing pages.
+
+## UNICEF response plan
+
+Open **UNICEF response plan** to analyse the live sector plan by sector, country, indicator and funding-data availability. The page shows combined indicator targets, funding requirements, funding-data coverage, comparisons by sector and country, and a detailed card for every matching indicator. Missing funding values are labelled **Not reported** rather than treated as zero. Because indicator targets may refer to overlapping people, the combined target is not a unique-beneficiary count.
 
 The header now includes the UNICEF logo. Use of the UNICEF name and logo should remain limited to an authorised UNICEF deployment and follow current organisational brand guidance.
 
@@ -115,9 +121,9 @@ Because browsers block some local-file data loading, use a tiny local web server
 
     `https://YOUR-GITHUB-NAME.github.io/unicef-el-nino-diary/`
 
-At this point the site reads the configured live Sheet.
+At this point the site reads the configured live Google Sheet.
 
-## Part 3 — Live Sheet
+## Part 3 — Live Google Sheet
 
 The dashboard is already configured to read this workbook:
 

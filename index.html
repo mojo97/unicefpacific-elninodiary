@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261112-20">
+  <link rel="stylesheet" href="styles.css?v=20261122-23">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -21,23 +21,23 @@
       <div><p class="eyebrow">UNICEF Pacific · Internal decision support</p><h1>El Niño Activity Diary</h1></div>
     </div>
     <div class="header-actions">
-      <div class="sync-state" id="sync-state"><i></i><span>Connecting to Live Sheet</span></div>
+      <div class="sync-state" id="sync-state"><i></i><span>Connecting to Google Sheet</span></div>
       <button class="button button-primary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
     </div>
   </header>
 
-  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting to the live Sheet.</div>
+  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting to the live Google Sheet.</div>
 
   <nav class="view-tabs" aria-label="Dashboard views">
     <button class="tab active" data-view="overview" type="button">Overview</button>
-    <button class="tab" data-view="timeline" type="button">Activity timeline</button>
+    <button class="tab" data-view="activities" type="button">Activity timeline</button>
     <button class="tab" data-view="map" type="button">Map</button>
-    <button class="tab" data-view="register" type="button">Activity register</button>
+    <button class="tab" data-view="sector-plan" type="button">UNICEF response plan</button>
     <button class="tab" data-view="key-messages" type="button">Key messages</button>
     <button class="tab" data-view="sitrep" type="button">Situation report</button>
   </nav>
 
-  <section class="filter-bar" aria-label="Dashboard filters">
+  <section class="filter-bar" id="activity-filters" aria-label="Dashboard filters">
     <label class="search-control"><span>Search</span><input id="search-filter" type="search" placeholder="Activity, result, partner or location"></label>
     <label><span>UNICEF Sector</span><select id="unit-filter"><option value="">All sectors</option></select></label>
     <label><span>Country</span><select id="country-filter"><option value="">All countries</option></select></label>
@@ -65,31 +65,56 @@
         <article class="panel"><div class="panel-heading"><div><p class="section-kicker">DELIVERY</p><h2>Reach by UNICEF sector</h2></div></div><div id="reach-bars" class="rank-bars"></div></article>
         <article class="panel followup-panel"><div class="panel-heading"><div><p class="section-kicker">MANAGEMENT</p><h2>Follow-up signals</h2></div></div><div id="followup-list" class="followup-list"></div></article>
         <article class="panel span-3 latest-panel">
-          <div class="panel-heading"><div><p class="section-kicker">LATEST DIARY ENTRIES</p><h2>What UNICEF sectors did most recently</h2></div><button class="text-button" type="button" data-go-view="timeline">View full timeline →</button></div>
+          <div class="panel-heading"><div><p class="section-kicker">LATEST DIARY ENTRIES</p><h2>What UNICEF sectors did most recently</h2></div><button class="text-button" type="button" data-go-view="activities">Explore all activities →</button></div>
           <div id="latest-activities" class="latest-grid"></div>
         </article>
       </div>
     </section>
 
-    <section class="view" id="view-timeline">
-      <div class="view-intro"><div><p class="section-kicker">CHRONOLOGICAL DIARY</p><h2>What happened, when and by whom</h2></div><p>Activities are positioned by actual activity date, not submission date.</p></div>
-      <div class="phase-ribbon" id="phase-ribbon"></div><div class="timeline" id="timeline"></div>
+    <section class="view" id="view-activities">
+      <div class="view-intro"><div><p class="section-kicker">ACTIVITY EXPLORER</p><h2>Activity timeline</h2></div><p>Move between a chronological narrative and an auditable register without leaving the page.</p></div>
+      <div class="activity-explorer-toolbar">
+        <div><strong id="activity-explorer-count">0 activities</strong><span>Sorted by activity date</span></div>
+        <div class="segmented-control" role="group" aria-label="Activity display">
+          <button class="active" data-activity-layout="timeline" type="button">Timeline</button>
+          <button data-activity-layout="register" type="button">Register</button>
+        </div>
+      </div>
+      <div class="phase-ribbon" id="phase-ribbon"></div>
+      <div id="activity-timeline-layout" class="activity-layout active"><div class="timeline" id="timeline"></div></div>
+      <div id="activity-register-layout" class="activity-layout"><div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>UNICEF Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div></div>
     </section>
 
     <section class="view" id="view-map">
-      <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative, use filter to accurately filter the dashboard.</p></div></aside></div>
+      <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><section class="declaration-panel"><p class="section-kicker">EMERGENCY / DISASTER DECLARATION</p><div id="map-declarations" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div class="map-country-list-legend"><i></i> Red markers indicate a recorded declaration</div><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
-    <section class="view" id="view-register">
-      <div class="view-intro"><div><p class="section-kicker">AUDITABLE REGISTER</p><h2>Every diary entry</h2></div><p>Select a row to see all 21 workbook fields.</p></div>
-      <div class="table-panel"><div class="table-scroll"><table><thead><tr><th>Date</th><th>UNICEF Sector</th><th>Country / location</th><th>Activity</th><th>Phase</th><th>Status</th><th>People</th><th>Funding</th><th></th></tr></thead><tbody id="register-body"></tbody></table></div></div>
+    <section class="view" id="view-sector-plan">
+      <div class="plan-hero">
+        <div><p class="section-kicker">LIVE UNICEF PLANNING DATA</p><h2>El Niño sector response plan</h2><p>Explore planned interventions, targets and funding requirements by country, sector and indicator.</p></div>
+        <div class="plan-hero-mark"><span>LIVE</span><small id="sector-plan-status">Connecting to response plan</small></div>
+      </div>
+      <section class="plan-filter-bar" aria-label="Response plan filters">
+        <label><span>Sector</span><select id="plan-sector-filter"><option value="">All sectors</option></select></label>
+        <label><span>Country</span><select id="plan-country-filter"><option value="">All countries</option></select></label>
+        <label class="plan-indicator-filter"><span>Indicator</span><select id="plan-indicator-filter"><option value="">All indicators</option></select></label>
+        <label><span>Funding</span><select id="plan-funding-filter"><option value="">All records</option><option value="reported">Funding reported</option><option value="missing">Funding not reported</option></select></label>
+        <button id="plan-clear-filters" class="clear-button" type="button">Clear</button>
+      </section>
+      <div class="plan-kpi-grid" id="plan-kpis"></div>
+      <div class="plan-chart-grid">
+        <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">SECTOR VIEW</p><h3>Funding required by sector</h3></div></div><div id="plan-sector-funding" class="plan-bars"></div></article>
+        <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">COUNTRY VIEW</p><h3>Funding required by country</h3></div></div><div id="plan-country-funding" class="plan-bars"></div></article>
+      </div>
+      <div class="plan-section-heading"><div><p class="section-kicker">INDICATOR PLANS</p><h3>Priority interventions and resource requirements</h3></div><span id="plan-record-count"></span></div>
+      <div id="sector-plan-cards" class="sector-plan-groups" aria-live="polite"></div>
     </section>
 
     <section class="view" id="view-key-messages">
       <div class="view-intro">
         <div><p class="section-kicker">COMMUNICATION RESOURCES</p><h2>El Niño key messages by sector</h2></div>
-        <p>Key Messages are from the SBC Unit. Use the UNICEF Sector filter to narrow the list.</p>
+        <p>Resources are read live from the Key Messages tab in the reporting Google Sheet. Use the UNICEF Sector filter to narrow the list.</p>
       </div>
       <div id="key-message-status" class="source-status"></div>
       <div id="key-messages-groups" class="key-message-groups" aria-live="polite"></div>
@@ -111,13 +136,13 @@
     </section>
   </main>
 
-  <footer><p><strong>Source:</strong> Sharepoint Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
+  <footer><p><strong>Source:</strong> Google Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20261112-20"></script>
+  <script src="config.js?v=20261122-23"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261112-20"></script>
+  <script src="app.js?v=20261122-23"></script>
 </body>
 </html>

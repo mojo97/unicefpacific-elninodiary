@@ -37,7 +37,7 @@ const SECTOR_COLORS = {
 };
 const SECTOR_PALETTE = ["#008dc9","#00a7b5","#ef6f61","#f28e2b","#8b5fbf","#59a14f","#e3b341","#4e6e81","#d45087","#7a9e9f"];
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
-let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], metadata = { isDemo: true }, map, markerLayer, supportingWorkbookPromise;
+let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], sectorPlans = [], emergencyDeclarations = [], metadata = { isDemo: true }, map, markerLayer, supportingWorkbookPromise;
 
 const $ = (id) => document.getElementById(id);
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -249,6 +249,57 @@ async function loadResponsePlans() {
   }).filter(item => item.country);
 }
 
+async function loadEmergencyDeclarations() {
+  const sheetConfig = config.googleSheets?.emergencyDeclarations || {};
+  const rows = await fetchCsvRows(sheetConfig,["Country","Date","Source"]);
+  return rows.map(row => ({
+    country: rowValue(row,["Country"]),
+    date: rowValue(row,["Date","Declaration Date"]),
+    source: directUrl(rowValue(row,["Source","Link"]))
+  })).filter(item => item.country);
+}
+
+function planNumber(value) {
+  const text = String(value ?? "").trim();
+  if (!text || /^(xx|tbd|n\/a|na|-)$/i.test(text)) return null;
+  const number = Number(text.replace(/[$,%\s,]/g,""));
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizePlanCountry(value) {
+  const country = String(value || "").trim();
+  const key = canonicalHeader(country);
+  if (key === "fsm" || key === "micronesia fsm" || key === "federated states of micronesia") return "Federated States of Micronesia";
+  return country;
+}
+
+async function loadSectorResponsePlan() {
+  const sheetConfig = config.googleSheets?.sectorResponsePlan || {};
+  const rows = await fetchCsvRows(sheetConfig,["Sector","Country (select from dropdown)","Indicators (select from dropdown)"]);
+  return rows.map((row,index) => ({
+    id: `plan-${index + 1}`,
+    sector: rowValue(row,["Sector"]),
+    country: normalizePlanCountry(rowValue(row,["Country (select from dropdown)","Country"])),
+    indicator: rowValue(row,["Indicators (select from dropdown)","Indicator","Indicators"]),
+    activity: rowValue(row,["Priority Activities","Priority Activity"]),
+    locations: rowValue(row,["Priority Locations","Priority Location"]),
+    groups: rowValue(row,["Priority Groups","Priority Group"]),
+    peopleInNeed: planNumber(rowValue(row,["People in Need (Number as per National Response plan)","People in Need"])),
+    nationalTarget: planNumber(rowValue(row,["Target (National) (if applicable) based on National response plan","Target (National)"])),
+    peopleTargeted: planNumber(rowValue(row,["People Targeted by UNICEF — Total","People Targeted by UNICEF - Total","People Targeted by UNICEF Total"])),
+    unknown: planNumber(rowValue(row,["Sex / age unknown"])),
+    girls: planNumber(rowValue(row,["Female (0 - 18) years"])),
+    boys: planNumber(rowValue(row,["Male (0 - 18) years"])),
+    women: planNumber(rowValue(row,["Female 18+ years and above"])),
+    men: planNumber(rowValue(row,["Male 18 + years and above"])),
+    targetUnit: rowValue(row,["Target unit (if not people)","Target unit"]),
+    nonPersonTarget: planNumber(rowValue(row,["Non-person indicator target","Non person indicator target"])),
+    unitCost: planNumber(rowValue(row,["per Unit cost","Unit cost"])),
+    fundingRequired: planNumber(rowValue(row,["Total Funding required (USD)","Total Funding Required (USD)"])),
+    notes: rowValue(row,["Additional Notes/Remarks","Notes","Remarks"])
+  })).filter(item => item.sector && item.country && (item.indicator || item.activity));
+}
+
 async function loadLocalData() {
   const response = await fetch("data/activities.json", { cache: "no-store" });
   if (!response.ok) throw new Error("The demonstration data file could not be loaded.");
@@ -273,13 +324,17 @@ async function refreshData() {
   try {
     allActivities = config.mode === "google-sheets" ? await loadGoogleSheetsData() : await loadLocalData();
     if (config.mode === "google-sheets") {
-      const [messagesResult,plansResult] = await Promise.allSettled([loadKeyMessages(),loadResponsePlans()]);
+      const [messagesResult,plansResult,sectorPlanResult,declarationsResult] = await Promise.allSettled([loadKeyMessages(),loadResponsePlans(),loadSectorResponsePlan(),loadEmergencyDeclarations()]);
       keyMessages = messagesResult.status === "fulfilled" ? messagesResult.value : [];
       responsePlans = plansResult.status === "fulfilled" ? plansResult.value : [];
-      metadata.auxiliaryWarnings = [messagesResult,plansResult].filter(result => result.status === "rejected").map(result => result.reason?.message || "A supporting sheet could not be loaded.");
+      sectorPlans = sectorPlanResult.status === "fulfilled" ? sectorPlanResult.value : [];
+      emergencyDeclarations = declarationsResult.status === "fulfilled" ? declarationsResult.value : [];
+      metadata.auxiliaryWarnings = [messagesResult,plansResult,sectorPlanResult,declarationsResult].filter(result => result.status === "rejected").map(result => result.reason?.message || "A supporting sheet could not be loaded.");
     } else {
       keyMessages = [];
       responsePlans = [];
+      sectorPlans = [];
+      emergencyDeclarations = [];
       metadata.auxiliaryWarnings = [];
     }
     allActivities.sort((a,b) => new Date(a["Activity Date*"]) - new Date(b["Activity Date*"]));
@@ -289,9 +344,9 @@ async function refreshData() {
     $("sync-state").querySelector("span").textContent = sourceLabel;
     $("sync-state").title = sourceLabel;
     $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Google Sheet";
-    populateFilters(); applyFilters();
+    populateFilters(); populatePlanFilters(); applyFilters();
     $("last-refreshed").textContent = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    showToast(`${allActivities.length} activities, ${keyMessages.length} key messages and ${responsePlans.length} response-plan rows loaded.`);
+    showToast(`${allActivities.length} activities and ${sectorPlans.length} UNICEF response-plan rows loaded.`);
     return true;
   } catch (error) {
     showToast(error.message || "Data refresh failed.");
@@ -333,6 +388,18 @@ function populateFilters() {
       $(id).max = activityDates[activityDates.length - 1];
     });
   }
+}
+
+function populatePlanFilters() {
+  const fill = (id,values,label) => {
+    const select = $(id);
+    const current = select.value;
+    select.innerHTML = `<option value="">All ${label}</option>` + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+    if (values.includes(current)) select.value = current;
+  };
+  fill("plan-sector-filter",[...new Set(sectorPlans.map(item => item.sector).filter(Boolean))].sort(),"sectors");
+  fill("plan-country-filter",[...new Set(sectorPlans.map(item => item.country).filter(Boolean))].sort(),"countries");
+  fill("plan-indicator-filter",[...new Set(sectorPlans.map(item => item.indicator).filter(Boolean))].sort(),"indicators");
 }
 
 function applyFilters() {
@@ -479,6 +546,7 @@ function renderLatest() {
 }
 function renderTimeline() {
   const rows = [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"]));
+  $("activity-explorer-count").textContent = `${rows.length} ${rows.length === 1 ? "activity" : "activities"}`;
   $("timeline").innerHTML = rows.length ? rows.map(d => `<article class="timeline-entry" style="--phase-color:${phaseColor(d["El Niño Phase*"])}"><time class="timeline-date">${fmtDate.format(new Date(d["Activity Date*"]))}</time><button class="timeline-card" data-entry="${escapeHtml(d["Entry ID"])}" type="button"><div class="timeline-card-head"><div><span class="phase-pill" style="color:${phaseColor(d["El Niño Phase*"])};background:${phaseColor(d["El Niño Phase*"])}18">${escapeHtml(d["El Niño Phase*"])}</span><h3>${escapeHtml(d["Activity Title*"])}</h3></div><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></div><p>${escapeHtml(d["What Was Done?*"])}</p><div class="timeline-tags"><span class="soft-tag">${escapeHtml(d["UNICEF Unit*"])}</span><span class="soft-tag">${escapeHtml(d["Country*"])}</span><span class="soft-tag">${escapeHtml(d["Activity Type*"])}</span><span class="soft-tag">${fmtNum.format(d["Children Reached"])} children</span></div></button></article>`).join("") : `<div class="empty-state">No activities match these filters.</div>`;
 }
 
@@ -494,16 +562,39 @@ function renderMap() {
   filteredActivities.forEach(d => {
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
-    const marker = L.circleMarker([d.latitude,lng], { radius: 9, color: "#fff", weight: 2, fillColor: phaseColor(d["El Niño Phase*"]), fillOpacity: .95 });
-    marker.bindPopup(`<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
+    const hasDeclaration = emergencyDeclarations.some(item => sameCountry(item.country,d["Country*"]));
+    const marker = L.circleMarker([d.latitude,lng], { radius: hasDeclaration ? 11 : 9, color: "#fff", weight: hasDeclaration ? 3 : 2, fillColor: hasDeclaration ? "#d71920" : phaseColor(d["El Niño Phase*"]), fillOpacity: .95 });
+    marker.bindPopup(`${hasDeclaration ? `<p class="map-popup-alert">Emergency/disaster declaration recorded</p>` : ""}<h3>${escapeHtml(d["Activity Title*"])}</h3><p><strong>${escapeHtml(d["Country*"])}</strong> · ${escapeHtml(d["Location / Admin Area"])}</p><p>${escapeHtml(d["UNICEF Unit*"])} · ${escapeHtml(d["Implementation Status*"])}</p><p>${fmtDate.format(new Date(d["Activity Date*"]))}</p>`);
     marker.on("click",() => selectMapCountry(d["Country*"]));
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);
   });
   if (bounds.length) map.fitBounds(bounds,{padding:[40,40],maxZoom:5});
   const countries = group("Country*");
   $("map-count").textContent = `${countries.length} mapped ${countries.length === 1 ? "location" : "locations"}`;
-  $("map-country-list").innerHTML = countries.map(([name,count]) => `<button class="country-row" data-map-country="${escapeHtml(name)}" type="button"><span>${escapeHtml(name)}</span><strong>${count}</strong></button>`).join("");
+  $("map-country-list").innerHTML = countries.map(([name,count]) => {
+    const declared = emergencyDeclarations.some(item => sameCountry(item.country,name));
+    return `<button class="country-row" data-map-country="${escapeHtml(name)}" type="button"><span>${escapeHtml(name)}${declared ? `<small class="declaration-badge">Declared</small>` : ""}</span><strong>${count}</strong></button>`;
+  }).join("");
   renderResponsePlans();
+  renderEmergencyDeclarations();
+}
+
+function countryKey(value) {
+  const key = canonicalHeader(value);
+  const aliases = {
+    "fsm": "federated states of micronesia",
+    "micronesia fsm": "federated states of micronesia",
+    "rmi": "marshall islands",
+    "republic of the marshall islands": "marshall islands"
+  };
+  return aliases[key] || key;
+}
+
+function sameCountry(left,right) { return countryKey(left) === countryKey(right); }
+
+function declarationDateLabel(value) {
+  const date = new Date(String(value || "").trim());
+  return Number.isNaN(date.getTime()) ? (value || "Date not reported") : fmtDate.format(date);
 }
 
 function selectMapCountry(country) {
@@ -520,7 +611,7 @@ function renderResponsePlans() {
     container.innerHTML = `<p class="supporting-empty">Select a country on the map or in the country list to see its response plan.</p>`;
     return;
   }
-  const matches = responsePlans.filter(item => canonicalHeader(item.country) === canonicalHeader(selectedCountry));
+  const matches = responsePlans.filter(item => sameCountry(item.country,selectedCountry));
   if (!matches.length) {
     container.innerHTML = `<p class="supporting-empty">No response-plan row is available for ${escapeHtml(selectedCountry)}.</p>`;
     return;
@@ -531,6 +622,21 @@ function renderResponsePlans() {
     return;
   }
   container.innerHTML = available.map(item => `<article class="response-plan-card"><strong>${escapeHtml(item.plan)}</strong>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open response plan ↗</a>` : `<span class="missing-resource-link">Response Plan Link is not available</span>`}</article>`).join("") + `<button class="map-clear-country" data-map-country="" type="button">Show all countries</button>`;
+}
+
+function renderEmergencyDeclarations() {
+  const container = $("map-declarations");
+  const selectedCountry = $("country-filter").value;
+  if (!selectedCountry) {
+    container.innerHTML = `<p class="supporting-empty">Select a country to see whether an El Niño emergency or disaster declaration is recorded.</p>`;
+    return;
+  }
+  const matches = emergencyDeclarations.filter(item => sameCountry(item.country,selectedCountry));
+  if (!matches.length) {
+    container.innerHTML = `<article class="declaration-card not-recorded"><span class="declaration-state">NOT RECORDED</span><strong>No declaration is listed for ${escapeHtml(selectedCountry)}</strong><p>This reflects the live declaration tab and does not confirm that no declaration exists.</p></article>`;
+    return;
+  }
+  container.innerHTML = matches.map(item => `<article class="declaration-card"><span class="declaration-state">DECLARATION RECORDED</span><strong>${escapeHtml(item.country)}</strong><time>${escapeHtml(declarationDateLabel(item.date))}</time>${item.source ? `<a href="${escapeHtml(item.source)}" target="_blank" rel="noopener">Open official source ↗</a>` : `<span class="missing-resource-link">Source link is not available</span>`}</article>`).join("");
 }
 
 function renderKeyMessages() {
@@ -551,6 +657,84 @@ function renderKeyMessages() {
 
 function renderRegister() {
   $("register-body").innerHTML = filteredActivities.length ? [...filteredActivities].sort((a,b)=>new Date(b["Activity Date*"])-new Date(a["Activity Date*"])).map(d => `<tr><td>${fmtDate.format(new Date(d["Activity Date*"]))}</td><td><strong>${escapeHtml(d["UNICEF Unit*"])}</strong></td><td>${escapeHtml(d["Country*"])}<br><small>${escapeHtml(d["Location / Admin Area"])}</small></td><td>${escapeHtml(d["Activity Title*"])}</td><td>${escapeHtml(d["El Niño Phase*"])}</td><td><span class="status-pill ${statusClass(d["Implementation Status*"])}">${escapeHtml(d["Implementation Status*"])}</span></td><td>${fmtNum.format(d["People Reached (Total)"])}</td><td>${fmtUSD.format(d["Funding Used (USD)"])}</td><td><button class="row-button" data-entry="${escapeHtml(d["Entry ID"])}" type="button">View →</button></td></tr>`).join("") : `<tr><td colspan="9" class="empty-state">No activities match these filters.</td></tr>`;
+}
+
+function filteredSectorPlans() {
+  const sector = $("plan-sector-filter").value;
+  const country = $("plan-country-filter").value;
+  const indicator = $("plan-indicator-filter").value;
+  const funding = $("plan-funding-filter").value;
+  return sectorPlans.filter(item =>
+    (!sector || item.sector === sector) &&
+    (!country || item.country === country) &&
+    (!indicator || item.indicator === indicator) &&
+    (!funding || (funding === "reported" ? item.fundingRequired !== null : item.fundingRequired === null))
+  );
+}
+
+function renderPlanBars(id,rows,field) {
+  const values = {};
+  rows.forEach(item => {
+    const label = item[field] || "Not reported";
+    if (!values[label]) values[label] = { total: 0, reported: 0 };
+    if (item.fundingRequired !== null) {
+      values[label].total += item.fundingRequired;
+      values[label].reported += 1;
+    }
+  });
+  const entries = Object.entries(values).sort((a,b) => b[1].total - a[1].total || a[0].localeCompare(b[0]));
+  const max = Math.max(1,...entries.map(([,value]) => value.total));
+  $(id).innerHTML = entries.length ? entries.map(([label,value]) => `<div class="plan-bar-row"><div class="plan-bar-label"><span>${escapeHtml(label)}</span><strong>${value.reported ? fmtUSD.format(value.total) : "Not reported"}</strong></div><div class="plan-bar-track"><i class="${value.reported ? "" : "unreported"}" style="width:${value.reported ? Math.max(2,value.total/max*100) : 0}%;background:${field === "sector" ? sectorColor(label) : "#008dc9"}"></i></div></div>`).join("") : `<div class="empty-state">No funding values match the selected filters.</div>`;
+}
+
+function planMetric(value,empty = "Not reported") {
+  return value === null ? empty : fmtNum.format(value);
+}
+
+function renderSectorPlan() {
+  const rows = filteredSectorPlans();
+  const totalFunding = rows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
+  const peopleTargeted = rows.reduce((sum,item) => sum + (item.peopleTargeted || 0),0);
+  const countries = new Set(rows.map(item => item.country).filter(Boolean));
+  const fundedRows = rows.filter(item => item.fundingRequired !== null).length;
+  $("sector-plan-status").textContent = `${sectorPlans.length} live plan rows · refreshed ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}`;
+  $("plan-record-count").textContent = `${rows.length} of ${sectorPlans.length} records`;
+  $("plan-kpis").innerHTML = [
+    ["Priority interventions",fmtNum.format(rows.length),`${countries.size} ${countries.size === 1 ? "country" : "countries"}`],
+    ["Combined indicator targets",fmtNum.format(peopleTargeted),"Sum of UNICEF targets; people may overlap"],
+    ["Funding required",fundedRows ? fmtUSD.format(totalFunding) : "Not reported",`${fundedRows} records with funding`],
+    ["Funding data coverage",rows.length ? `${Math.round(fundedRows/rows.length*100)}%` : "0%",`${rows.length - fundedRows} records still missing a value`]
+  ].map(([label,value,note],index) => `<article class="plan-kpi ${index === 2 ? "accent" : ""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  renderPlanBars("plan-sector-funding",rows,"sector");
+  renderPlanBars("plan-country-funding",rows,"country");
+
+  if (!rows.length) {
+    $("sector-plan-cards").innerHTML = `<div class="empty-state">No response-plan records match these filters.</div>`;
+    return;
+  }
+  const sectors = [...new Set(rows.map(item => item.sector))].sort();
+  $("sector-plan-cards").innerHTML = sectors.map(sector => {
+    const sectorRows = rows.filter(item => item.sector === sector);
+    const sectorFunding = sectorRows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
+    const sectorFundingRows = sectorRows.filter(item => item.fundingRequired !== null).length;
+    return `<section class="sector-plan-group" style="--sector-color:${sectorColor(sector)}">
+      <header><div><span>UNICEF SECTOR</span><h3>${escapeHtml(sector)}</h3></div><div><strong>${sectorFundingRows ? fmtUSD.format(sectorFunding) : "Not reported"}</strong><small>funding required</small></div></header>
+      <div class="sector-plan-card-grid">${sectorRows.map(item => {
+        const targetLabel = item.peopleTargeted !== null ? "People targeted" : (item.targetUnit || "Non-person target");
+        const targetValue = item.peopleTargeted !== null ? item.peopleTargeted : item.nonPersonTarget;
+        const demographics = [["Girls 0–18",item.girls],["Boys 0–18",item.boys],["Women 18+",item.women],["Men 18+",item.men],["Sex/age unknown",item.unknown]].filter(([,value]) => value !== null);
+        return `<article class="sector-plan-card">
+          <div class="plan-card-top"><span class="plan-country">${escapeHtml(item.country)}</span><span class="plan-funding ${item.fundingRequired === null ? "missing" : ""}">${item.fundingRequired === null ? "Funding not reported" : fmtUSD.format(item.fundingRequired)}</span></div>
+          <h4>${escapeHtml(item.indicator || "Indicator not reported")}</h4>
+          <div class="plan-card-metrics"><div><strong>${planMetric(targetValue)}</strong><span>${escapeHtml(targetLabel)}</span></div><div><strong>${planMetric(item.peopleInNeed)}</strong><span>People in need</span></div><div><strong>${planMetric(item.nationalTarget)}</strong><span>National target</span></div></div>
+          <div class="plan-card-section"><span>Priority activity</span><p>${escapeHtml(item.activity || "Not reported")}</p></div>
+          <div class="plan-context-grid"><div><span>Priority locations</span><p>${escapeHtml(item.locations || "Not reported")}</p></div><div><span>Priority groups</span><p>${escapeHtml(item.groups || "Not reported")}</p></div></div>
+          ${demographics.length ? `<div class="demographic-strip">${demographics.map(([label,value]) => `<div><strong>${fmtNum.format(value)}</strong><span>${label}</span></div>`).join("")}</div>` : ""}
+          <footer><span>${item.unitCost === null ? "Unit cost not reported" : `${fmtUSD.format(item.unitCost)} per unit`}</span>${item.notes ? `<span title="${escapeHtml(item.notes)}">Notes available</span>` : ""}</footer>
+        </article>`;
+      }).join("")}</div>
+    </section>`;
+  }).join("");
 }
 
 function sitrepFilterRows() {
@@ -664,11 +848,12 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderKeyMessages(); renderSitrep();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderKeyMessages(); renderSectorPlan(); renderSitrep();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("active",v.id === `view-${name}`));
+  $("activity-filters").classList.toggle("hidden",name === "sector-plan");
   if (name === "map") { initMap(); setTimeout(() => { map.invalidateSize(); renderMap(); },50); }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -676,7 +861,15 @@ function showToast(message) { const toast = $("toast"); toast.textContent = mess
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click",()=>switchView(tab.dataset.view)));
 document.querySelectorAll("[data-go-view]").forEach(button => button.addEventListener("click",()=>switchView(button.dataset.goView)));
+document.querySelectorAll("[data-activity-layout]").forEach(button => button.addEventListener("click",()=>{
+  const layout = button.dataset.activityLayout;
+  document.querySelectorAll("[data-activity-layout]").forEach(item => item.classList.toggle("active",item === button));
+  $("activity-timeline-layout").classList.toggle("active",layout === "timeline");
+  $("activity-register-layout").classList.toggle("active",layout === "register");
+}));
 ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id => $(id).addEventListener(id === "search-filter" ? "input" : "change",applyFilters));
+['plan-sector-filter','plan-country-filter','plan-indicator-filter','plan-funding-filter'].forEach(id => $(id).addEventListener('change',renderSectorPlan));
+$("plan-clear-filters").addEventListener("click",()=>{ ['plan-sector-filter','plan-country-filter','plan-indicator-filter','plan-funding-filter'].forEach(id => $(id).value = ""); renderSectorPlan(); });
 $("clear-filters").addEventListener("click",()=>{ ["search-filter","unit-filter","country-filter","phase-filter","status-filter","activity-start-filter","activity-end-filter"].forEach(id=>$(id).value=""); applyFilters(); });
 $("refresh-button").addEventListener("click",async()=>{
   await refreshData();
