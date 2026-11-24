@@ -22,12 +22,12 @@
     </div>
     <div class="header-actions">
       <div class="viewer-count hidden" id="viewer-count" title="Current viewers reported by the configured analytics endpoint"><i></i><span>— viewing</span></div>
-      <div class="sync-state" id="sync-state"><i></i><span>Connecting to Google Sheet</span></div>
+      <div class="sync-state" id="sync-state"><i></i><span>Connecting</span></div>
       <button class="button button-primary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
     </div>
   </header>
 
-  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting to the live Google Sheet.</div>
+  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting</div>
 
   <nav class="view-tabs" aria-label="Dashboard views">
     <button class="tab active" data-view="overview" type="button">Overview</button>
@@ -126,7 +126,7 @@
     <section class="view" id="view-key-messages">
       <div class="view-intro">
         <div><p class="section-kicker">COMMUNICATION RESOURCES</p><h2>El Niño key messages by sector</h2></div>
-        <p>Resources are read live from the Key Messages tab in the reporting Google Sheet. Use the UNICEF Sector filter to narrow the list.</p>
+        <p>Resources are read live from the Key Messages tab in the reporting Sheet. Use the UNICEF Sector filter to narrow the list.</p>
       </div>
       <div id="key-message-status" class="source-status"></div>
       <div id="key-messages-groups" class="key-message-groups" aria-live="polite"></div>
@@ -148,7 +148,7 @@
     </section>
   </main>
 
-  <footer><p><strong>Source:</strong> Google Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
+  <footer><p><strong>Source:</strong> Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
