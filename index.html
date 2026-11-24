@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261123-27">
+  <link rel="stylesheet" href="styles.css?v=20261124-28">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -21,6 +21,7 @@
       <div><p class="eyebrow">UNICEF Pacific · Internal decision support</p><h1>El Niño Activity Diary</h1></div>
     </div>
     <div class="header-actions">
+      <div class="viewer-count hidden" id="viewer-count" title="Current viewers reported by the configured analytics endpoint"><i></i><span>— viewing</span></div>
       <div class="sync-state" id="sync-state"><i></i><span>Connecting to Google Sheet</span></div>
       <button class="button button-primary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
     </div>
@@ -32,7 +33,7 @@
     <button class="tab active" data-view="overview" type="button">Overview</button>
     <button class="tab" data-view="activities" type="button">Activity timeline</button>
     <button class="tab" data-view="map" type="button">Map</button>
-    <button class="tab" data-view="sector-plan" type="button">UNICEF response plan</button>
+    <button class="tab" data-view="sector-plan" type="button">Response Plan</button>
     <button class="tab" data-view="key-messages" type="button">Key messages</button>
     <button class="tab" data-view="sitrep" type="button">Situation report</button>
   </nav>
@@ -87,7 +88,8 @@
 
     <section class="view" id="view-map">
       <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><section class="declaration-panel"><p class="section-kicker">EMERGENCY / DISASTER DECLARATION</p><div id="map-declarations" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div class="map-country-list-legend"><i></i> Red markers indicate a recorded declaration</div><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
+      <section class="arcgis-map-panel hidden" id="arcgis-map-panel"><div class="arcgis-map-head"><div><p class="section-kicker">LIVE ARCGIS MAP</p><h3>Operational map</h3></div><a id="arcgis-map-link" target="_blank" rel="noopener">Open full map</a></div><iframe id="arcgis-map-frame" title="Live ArcGIS operational map" loading="lazy" allowfullscreen></iframe></section>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities and recorded hazard events"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><section class="declaration-panel"><p class="section-kicker">EMERGENCY / DISASTER DECLARATION</p><div id="map-declarations" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div class="map-country-list-legend"><span><i class="legend-declared"></i>Declaration recorded</span><span><i class="legend-activity"></i>Activity location</span><span><i class="legend-cyclone"></i>Cyclone impact</span></div><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
     <section class="view" id="view-sector-plan">
@@ -151,9 +153,9 @@
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=20261123-27"></script>
+  <script src="config.js?v=20261124-28"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261123-27"></script>
+  <script src="app.js?v=20261124-28"></script>
 </body>
 </html>

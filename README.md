@@ -10,7 +10,7 @@ The site reads five Google Sheet tabs whenever it loads and whenever **Refresh**
 - **Key Messages** (`gid=1470373217`): `Key Messages` and `Link`; an optional `Sector` column is supported. Without a Sector value, the site infers the sector from the resource title or filename.
 - **Response Plan** (`gid=542411509`): `Country` and `Response Plan Link`.
 - **UNICEF Sector Response Plan** (`gid=1281880942`): sector, country, indicator, priority activity/location/group, people in need, national and UNICEF targets, age/sex breakdown, non-person target, unit cost, total funding required, and notes.
-- **Emergency Declaration** (`gid=1366090099`): `Country`, `Date` and `Source`. On the Map page, declared countries receive a red marker and badge; all non-declared activity markers use UNICEF blue. Selecting a country shows the recorded declaration date and opens its source link.
+- **Emergency Declaration** (`gid=1366090099`): `Country`, `Date` and `Source`. On the Map page, declared countries receive a red marker and badge; all non-declared activity markers use UNICEF blue. Selecting a country shows the recorded declaration date and opens its source link. The same declaration date and official source are shown inside that country's Situation Report.
 
 The `Link` and `Response Plan Link` cells may contain either a full `https://...` address or a Google Sheets hyperlink/smart chip. The site reads the cell's actual document link and never redirects these buttons to the source Google Sheet.
 
@@ -18,9 +18,9 @@ The `Link` and `Response Plan Link` cells may contain either a full `https://...
 
 Use **Activity date from** and **Activity date to** for an inclusive date range. The range filters the Overview, Activity timeline, Map and Situation Report. **Clear filters** resets both dates with the other dashboard filters. On **Activity timeline**, use the **Timeline / Register** switch to move between the chronological narrative and the full audit table without changing pages.
 
-## UNICEF response plan
+## Response Plan
 
-Open **UNICEF response plan** to analyse the live sector plan by sector, country, indicator and funding-data availability. Detailed records use a compact, collapsible hierarchy that can switch between **Sector → Country** and **Country → Sector**. Expand a group to see a table with indicator, target, sex-and-age breakdown and funding. Select **View more** for the priority activity, locations, priority groups, people in need, national target, unit cost and notes. The interactive pivot can switch its rows, columns and measure between country, sector, indicator, funding, targets, people in need and record counts. Missing funding values are labelled **Not reported** rather than treated as zero. Because indicator targets may refer to overlapping people, the combined target is not a unique-beneficiary count.
+Open **Response Plan** to analyse the live sector plan by sector, country, indicator and funding-data availability. Detailed records use a compact, collapsible hierarchy that can switch between **Sector → Country** and **Country → Sector**. Expand a group to see a table with indicator, target, sex-and-age breakdown and funding. Select **View more** for the priority activity, locations, priority groups, people in need, national target, unit cost and notes. The interactive pivot can switch its rows, columns and measure between country, sector, indicator, funding, targets, people in need and record counts. Missing funding values are labelled **Not reported** rather than treated as zero. Because indicator targets may refer to overlapping people, the combined target is not a unique-beneficiary count.
 
 The header now includes the UNICEF logo. Use of the UNICEF name and logo should remain limited to an authorised UNICEF deployment and follow current organisational brand guidance.
 
@@ -79,9 +79,21 @@ Funding labels follow the same rule. Planned or On Hold records show **Funding r
 
 The country selector begins with **All countries** and stays synchronized with the dashboard Country filter. The dashboard's UNICEF Sector, Phase, Status and Search filters also narrow the report. Every matching activity is listed under its country and UNICEF Sector, including separate **Activity date** and **Reporting date** fields. Select **Print / Save PDF** to open the browser print window; choose **Save as PDF** to create a landscape A4 briefing page.
 
+For countries present in the live **Emergency Declaration** tab, the report adds a red declaration notice containing the declaration date and a link to the official source.
+
 The report is a draft synthesized from activity records, not a replacement for a validated humanitarian needs assessment. Review the generated narrative, totals, evidence and any personal information before external circulation. With many sectors or unusually long narratives, the browser may continue the report onto a second page rather than cut content.
 
 The workbook has no latitude or longitude columns. The map therefore places activities at country centroids and shows the reported Location / Admin Area as text. To show exact locations later, add validated `Latitude` and `Longitude` columns and extend the map logic.
+
+The map also includes a dark-blue hazard marker for the Northern Cook Islands, recording Severe Tropical Cyclone Xavier as Category 4 on 19 November 2026 with its source link. This is configured in `config.js` under `hazardEvents`.
+
+## Optional live ArcGIS map
+
+Paste an approved public ArcGIS **embed URL** into `arcgisMapUrl` in `config.js`. When the value is blank, the ArcGIS panel stays hidden. When configured, the live ArcGIS map appears above the activity map and includes an **Open full map** link.
+
+## Optional live viewer count
+
+GitHub Pages cannot calculate concurrent viewers on its own because it is a static host. The header contains a viewer-count widget that stays hidden until `viewerCounterUrl` in `config.js` points to an approved analytics endpoint. The endpoint must allow browser access and return JSON containing `active`, `viewers`, or `count`, for example `{ "active": 12 }`. Use only an organisation-approved service because visitor counting can involve IP-address or device processing.
 
 ## Part 1 — Preview it on your computer
 

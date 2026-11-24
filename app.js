@@ -37,6 +37,7 @@ const SECTOR_COLORS = {
 };
 const SECTOR_PALETTE = ["#008dc9","#00a7b5","#ef6f61","#f28e2b","#8b5fbf","#59a14f","#e3b341","#4e6e81","#d45087","#7a9e9f"];
 const config = window.DIARY_CONFIG || { mode: "local", refreshMinutes: 5 };
+const HAZARD_EVENTS = Array.isArray(config.hazardEvents) ? config.hazardEvents : [];
 let allActivities = [], filteredActivities = [], keyMessages = [], responsePlans = [], sectorPlans = [], emergencyDeclarations = [], metadata = { isDemo: true }, map, markerLayer, supportingWorkbookPromise;
 
 const $ = (id) => document.getElementById(id);
@@ -345,7 +346,7 @@ async function refreshData() {
     allActivities.sort((a,b) => new Date(a["Activity Date*"]) - new Date(b["Activity Date*"]));
     $("demo-banner").classList.toggle("hidden", !metadata.isDemo);
     $("sync-state").classList.toggle("live", !metadata.isDemo);
-    const sourceLabel = metadata.isDemo ? "Demonstration data" : "Live Google Sheet";
+    const sourceLabel = metadata.isDemo ? "Demonstration data" : "Live";
     $("sync-state").querySelector("span").textContent = sourceLabel;
     $("sync-state").title = sourceLabel;
     $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Google Sheet";
@@ -379,10 +380,12 @@ function populateSelect(id, values, label) {
 }
 function populateFilters() {
   populateSelect("unit-filter", unique("UNICEF Unit*"), "sectors");
-  populateSelect("country-filter", unique("Country*"), "countries");
+  const activityCountries = unique("Country*");
+  const mapCountries = [...new Set([...activityCountries,...HAZARD_EVENTS.map(item => item.country).filter(Boolean)])].sort();
+  populateSelect("country-filter", mapCountries, "countries");
   populateSelect("phase-filter", unique("El Niño Phase*"), "phases");
   populateSelect("status-filter", unique("Implementation Status*"), "statuses");
-  const countries = unique("Country*");
+  const countries = activityCountries;
   const currentReportCountry = $("sitrep-country").value;
   $("sitrep-country").innerHTML = `<option value="">All countries</option>` + countries.map(country => `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`).join("");
   $("sitrep-country").value = countries.includes(currentReportCountry) ? currentReportCountry : "";
@@ -559,9 +562,21 @@ function initMap() {
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
   markerLayer = L.layerGroup().addTo(map); L.control.scale({ imperial: false }).addTo(map);
 }
+function renderArcgisMap() {
+  const panel = $("arcgis-map-panel");
+  const frame = $("arcgis-map-frame");
+  const link = $("arcgis-map-link");
+  const url = directUrl(config.arcgisMapUrl);
+  panel.classList.toggle("hidden",!url);
+  if (!url) { frame.removeAttribute("src"); link.removeAttribute("href"); return; }
+  if (frame.src !== url) frame.src = url;
+  link.href = url;
+}
 function renderMap() {
   if (!map) return;
   markerLayer.clearLayers(); const bounds = [];
+  const selectedCountry = $("country-filter").value;
+  const visibleHazards = HAZARD_EVENTS.filter(item => !selectedCountry || sameCountry(item.country,selectedCountry));
   filteredActivities.forEach(d => {
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     let lng = d.longitude < 100 ? d.longitude + 360 : d.longitude;
@@ -571,12 +586,29 @@ function renderMap() {
     marker.on("click",() => selectMapCountry(d["Country*"]));
     marker.addTo(markerLayer); bounds.push([d.latitude,lng]);
   });
+  visibleHazards.forEach(item => {
+    const latitude = Number(item.latitude);
+    const longitude = Number(item.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    const lng = longitude < 100 ? longitude + 360 : longitude;
+    const source = directUrl(item.source);
+    const marker = L.circleMarker([latitude,lng], { radius: 12, color: "#fff", weight: 3, fillColor: "#003b5c", fillOpacity: .98 });
+    marker.bindPopup(`<p class="map-popup-cyclone">Cyclone impact recorded</p><h3>${escapeHtml(item.event || "Cyclone event")}</h3><p><strong>${escapeHtml(item.country)}</strong> · ${escapeHtml(item.location || "Location not reported")}</p><p>${escapeHtml(item.category || "Category not reported")} · ${escapeHtml(formatDateValue(item.date))}</p>${source ? `<p><a href="${escapeHtml(source)}" target="_blank" rel="noopener">Open source</a></p>` : ""}`);
+    marker.on("click",() => selectMapCountry(item.country));
+    marker.addTo(markerLayer); bounds.push([latitude,lng]);
+  });
   if (bounds.length) map.fitBounds(bounds,{padding:[40,40],maxZoom:5});
   const countries = group("Country*");
+  visibleHazards.forEach(item => {
+    if (!countries.some(([name]) => sameCountry(name,item.country))) countries.push([item.country,0]);
+  });
+  countries.sort((a,b) => String(a[0]).localeCompare(String(b[0])));
   $("map-count").textContent = `${countries.length} mapped ${countries.length === 1 ? "location" : "locations"}`;
   $("map-country-list").innerHTML = countries.map(([name,count]) => {
     const declared = emergencyDeclarations.some(item => sameCountry(item.country,name));
-    return `<button class="country-row" data-map-country="${escapeHtml(name)}" type="button"><span>${escapeHtml(name)}${declared ? `<small class="declaration-badge">Declared</small>` : ""}</span><strong>${count}</strong></button>`;
+    const hazards = visibleHazards.filter(item => sameCountry(item.country,name));
+    const hazardBadge = hazards.length ? `<small class="hazard-badge">${escapeHtml(hazards[0].event)} · ${escapeHtml(hazards[0].category)}</small>` : "";
+    return `<button class="country-row" data-map-country="${escapeHtml(name)}" type="button"><span>${escapeHtml(name)}${declared ? `<small class="declaration-badge">Declared</small>` : ""}${hazardBadge}</span><strong>${count || "TC"}</strong></button>`;
   }).join("");
   renderResponsePlans();
   renderEmergencyDeclarations();
@@ -860,8 +892,10 @@ function renderSitrep() {
     const countryChildren = countryRows.reduce((sum,row) => sum + (Number(row["Children Reached"]) || 0),0);
     const countryFunding = countryRows.reduce((sum,row) => sum + (Number(row["Funding Used (USD)"]) || 0),0);
     const countryReachMode = reachMode(countryRows);
+    const declarationMatches = emergencyDeclarations.filter(item => sameCountry(item.country,countryName));
+    const declarationNotice = declarationMatches.map(item => `<aside class="sitrep-declaration"><div><span>EMERGENCY / DISASTER DECLARATION</span><strong>${escapeHtml(countryName)}: declaration recorded</strong></div><div class="sitrep-declaration-meta"><time>${escapeHtml(declarationDateLabel(item.date))}</time>${item.source ? `<a href="${escapeHtml(item.source)}" target="_blank" rel="noopener">Official source</a>` : `<small>Source link not available</small>`}</div></aside>`).join("");
     const countryHeading = selectedCountry ? "" : `<header class="sitrep-country-head"><div><span>COUNTRY</span><h3>${escapeHtml(countryName)}</h3></div><div class="sitrep-country-stats"><span><strong>${fmtNum.format(countryRows.length)}</strong> activities</span><span><strong>${fmtNum.format(countryPeople)}</strong> people ${countryReachMode}</span><span><strong>${fmtNum.format(countryChildren)}</strong> children ${countryReachMode}</span><span><strong>${fmtUSD.format(countryFunding)}</strong> ${fundingMode(countryRows)}</span></div></header>`;
-    return `<section class="sitrep-country-group">${countryHeading}<div class="sitrep-country-sectors">${sectors}</div></section>`;
+    return `<section class="sitrep-country-group">${countryHeading}${declarationNotice}<div class="sitrep-country-sectors">${sectors}</div></section>`;
   }).join("");
 
   const reportScope = selectedCountry ? `Country: ${selectedCountry}` : `Regional overview · ${countryNames.length} ${countryNames.length === 1 ? "country" : "countries"}`;
@@ -899,7 +933,7 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderKeyMessages(); renderSectorPlan(); renderSitrep();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderArcgisMap(); renderMap(); renderKeyMessages(); renderSectorPlan(); renderSitrep();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
@@ -909,6 +943,23 @@ function switchView(name) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function showToast(message) { const toast = $("toast"); toast.textContent = message; toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(()=>toast.classList.remove("show"),3000); }
+
+async function loadViewerCount() {
+  const widget = $("viewer-count");
+  const url = directUrl(config.viewerCounterUrl);
+  if (!url) { widget.classList.add("hidden"); return; }
+  try {
+    const response = await fetch(url,{ cache: "no-store" });
+    if (!response.ok) throw new Error(`Viewer counter returned ${response.status}`);
+    const data = await response.json();
+    const viewers = Number(data.active ?? data.viewers ?? data.count);
+    if (!Number.isFinite(viewers)) throw new Error("Viewer count was not returned");
+    widget.querySelector("span").textContent = `${fmtNum.format(viewers)} viewing`;
+    widget.classList.remove("hidden");
+  } catch (error) {
+    widget.classList.add("hidden");
+  }
+}
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click",()=>switchView(tab.dataset.view)));
 document.querySelectorAll("[data-go-view]").forEach(button => button.addEventListener("click",()=>switchView(button.dataset.goView)));
@@ -961,5 +1012,7 @@ document.body.addEventListener("click",e=>{
   if(target) openDetail(target.dataset.entry);
 });
 
+loadViewerCount();
 refreshData();
 setInterval(()=>refreshData(),Math.max(1,Number(config.refreshMinutes)||5)*60000);
+setInterval(()=>loadViewerCount(),60000);

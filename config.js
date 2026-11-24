@@ -2,6 +2,22 @@
 window.DIARY_CONFIG = {
   mode: "google-sheets",
   refreshMinutes: 5,
+  /* Optional public ArcGIS embed URL. Leave blank until the approved map link is available. */
+  arcgisMapUrl: "",
+  /* Optional approved endpoint returning JSON such as { "active": 12 }. */
+  viewerCounterUrl: "",
+  hazardEvents: [
+    {
+      country: "Cook Islands",
+      location: "Northern Cook Islands",
+      event: "Severe Tropical Cyclone Xavier",
+      date: "2026-11-19",
+      category: "Category 4",
+      latitude: -10.9,
+      longitude: -165.8,
+      source: "https://cookislands.travel/tropical-cyclone-faqs"
+    }
+  ],
   googleSheets: {
     workbookUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/export?format=xlsx",
     dataUrl: "https://docs.google.com/spreadsheets/d/1x0kGVCRSWDESMxIMSiLlYj6bwV217AZ_wRXRVMIPxZk/gviz/tq?tqx=out:csv&sheet=Activity%20Diary",
