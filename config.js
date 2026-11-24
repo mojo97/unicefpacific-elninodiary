@@ -2,8 +2,6 @@
 window.DIARY_CONFIG = {
   mode: "google-sheets",
   refreshMinutes: 5,
-  /* Optional public ArcGIS embed URL. Leave blank until the approved map link is available. */
-  arcgisMapUrl: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer",
   /* Optional approved endpoint returning JSON such as { "active": 12 }. */
   viewerCounterUrl: "",
   hazardEvents: [
