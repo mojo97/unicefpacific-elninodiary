@@ -87,10 +87,6 @@ The workbook has no latitude or longitude columns. The map therefore places acti
 
 The map also includes a dark-blue hazard marker for the Northern Cook Islands, recording Severe Tropical Cyclone Xavier as Category 4 on 19 November 2026 with its source link. This is configured in `config.js` under `hazardEvents`.
 
-## Optional live ArcGIS map
-
-Paste an approved public ArcGIS **embed URL** into `arcgisMapUrl` in `config.js`. When the value is blank, the ArcGIS panel stays hidden. When configured, the live ArcGIS map appears above the activity map and includes an **Open full map** link.
-
 ## Optional live viewer count
 
 GitHub Pages cannot calculate concurrent viewers on its own because it is a static host. The header contains a viewer-count widget that stays hidden until `viewerCounterUrl` in `config.js` points to an approved analytics endpoint. The endpoint must allow browser access and return JSON containing `active`, `viewers`, or `count`, for example `{ "active": 12 }`. Use only an organisation-approved service because visitor counting can involve IP-address or device processing.

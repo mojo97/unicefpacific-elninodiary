@@ -274,12 +274,6 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .plan-expanded-content span { color: var(--blue); font-size: 9px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
 .plan-expanded-content p { margin: 4px 0 0; color: #405964; font-size: 12px; line-height: 1.45; }
 
-.arcgis-map-panel { margin-bottom: 16px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); }
-.arcgis-map-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 18px; }
-.arcgis-map-head h3 { margin: 3px 0 0; color: var(--navy); font: 800 18px Manrope,sans-serif; }
-.arcgis-map-head a { color: var(--blue); font-size: 12px; font-weight: 800; text-decoration: none; }
-.arcgis-map-head a:hover { text-decoration: underline; }
-#arcgis-map-frame { display: block; width: 100%; min-height: 560px; border: 0; border-top: 1px solid var(--line); }
 .map-layout { display: grid; grid-template-columns: minmax(0,1fr) 290px; min-height: 600px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); }
 #map-canvas { min-height: 600px; background: #dcecf1; z-index: 1; }
 .map-summary { padding: 22px; border-left: 1px solid var(--line); }

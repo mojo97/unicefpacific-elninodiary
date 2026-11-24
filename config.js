@@ -3,7 +3,6 @@ window.DIARY_CONFIG = {
   mode: "google-sheets",
   refreshMinutes: 5,
   /* Optional approved endpoint returning JSON such as { "active": 12 }. */
-  arcgisMapUrl: "",
   viewerCounterUrl: "",
   hazardEvents: [
     {

@@ -562,16 +562,6 @@ function initMap() {
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
   markerLayer = L.layerGroup().addTo(map); L.control.scale({ imperial: false }).addTo(map);
 }
-function renderArcgisMap() {
-  const panel = $("arcgis-map-panel");
-  const frame = $("arcgis-map-frame");
-  const link = $("arcgis-map-link");
-  const url = directUrl(config.arcgisMapUrl);
-  panel.classList.toggle("hidden",!url);
-  if (!url) { frame.removeAttribute("src"); link.removeAttribute("href"); return; }
-  if (frame.src !== url) frame.src = url;
-  link.href = url;
-}
 function renderMap() {
   if (!map) return;
   markerLayer.clearLayers(); const bounds = [];
@@ -933,7 +923,7 @@ function openDetail(entryId) {
 }
 
 function renderAll() {
-  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderArcgisMap(); renderMap(); renderKeyMessages(); renderSectorPlan(); renderSitrep();
+  renderKpis(); renderMonthly(); renderPhase(); renderRankBars("unit-bars",group("UNICEF Unit*")); renderRankBars("reach-bars",group("UNICEF Unit*","People Reached (Total)")); renderFollowup(); renderLatest(); renderTimeline(); renderRegister(); renderMap(); renderKeyMessages(); renderSectorPlan(); renderSitrep();
 }
 function switchView(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active",t.dataset.view === name));
