@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20261124-29">
+  <link rel="stylesheet" href="styles.css?v=20261125-31">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
@@ -22,12 +22,12 @@
     </div>
     <div class="header-actions">
       <div class="viewer-count hidden" id="viewer-count" title="Current viewers reported by the configured analytics endpoint"><i></i><span>— viewing</span></div>
-      <div class="sync-state" id="sync-state"><i></i><span>Connecting</span></div>
+      <div class="sync-state" id="sync-state"><i></i><span>Connecting to Google Sheet</span></div>
       <button class="button button-primary" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
     </div>
   </header>
 
-  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting</div>
+  <div class="demo-banner" id="demo-banner"><strong>Loading:</strong> connecting to the live Google Sheet.</div>
 
   <nav class="view-tabs" aria-label="Dashboard views">
     <button class="tab active" data-view="overview" type="button">Overview</button>
@@ -87,14 +87,14 @@
     </section>
 
     <section class="view" id="view-map">
-      <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids</p></div>
-      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities and recorded hazard events"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><section class="declaration-panel"><p class="section-kicker">EMERGENCY / DISASTER DECLARATION</p><div id="map-declarations" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div class="map-country-list-legend"><span><i class="legend-declared"></i>Declaration recorded</span><span><i class="legend-activity"></i>Activity location</span><span><i class="legend-cyclone"></i>Cyclone impact</span></div><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative.</p></div></aside></div>
+      <div class="view-intro map-intro"><div><p class="section-kicker">WHERE</p><h2>Geographic footprint</h2></div><p>Markers use country centroids because the workbook has location names but no GPS fields.</p></div>
+      <div class="map-layout"><div id="map-canvas" aria-label="Map of El Niño activities and recorded hazard events"></div><aside class="map-summary"><section class="response-plan-panel"><p class="section-kicker">COUNTRY RESPONSE PLAN</p><div id="map-response-plans" aria-live="polite"></div></section><section class="declaration-panel"><p class="section-kicker">EMERGENCY / DISASTER DECLARATION</p><div id="map-declarations" aria-live="polite"></div></section><p class="section-kicker">SELECTED FOOTPRINT</p><h3 id="map-count"></h3><div class="map-country-list-legend"><span><i class="legend-declared"></i>Declaration recorded</span><span><i class="legend-activity"></i>Activity location</span><span><i class="legend-cyclone"></i>Cyclone impact</span></div><div id="map-country-list" class="country-list"></div><div class="map-note"><strong>Map note</strong><p>Locations are indicative. Add GPS fields to the workbook for exact community or facility mapping.</p></div></aside></div>
     </section>
 
     <section class="view" id="view-sector-plan">
       <div class="plan-hero">
-        <div><p class="section-kicker">UNICEF PLANNING DATA</p><h2>El Niño sector response plan</h2><p>Explore planned interventions, targets and funding requirements by country, sector and indicator.</p></div>
-        <div class="plan-hero-mark"><span>UPDATED</span><small id="sector-plan-status">Connecting to response plan</small></div>
+        <div><p class="section-kicker">LIVE UNICEF PLANNING DATA</p><h2>El Niño sector response plan</h2><p>Explore planned interventions, targets and funding requirements by country, sector and indicator.</p></div>
+        <div class="plan-hero-mark"><span>LIVE</span><small id="sector-plan-status">Connecting to response plan</small></div>
       </div>
       <section class="plan-filter-bar" aria-label="Response plan filters">
         <label><span>Sector</span><select id="plan-sector-filter"><option value="">All sectors</option></select></label>
@@ -104,6 +104,7 @@
         <button id="plan-clear-filters" class="clear-button" type="button">Clear</button>
       </section>
       <div class="plan-kpi-grid" id="plan-kpis"></div>
+      <p class="plan-age-note" id="plan-age-note" aria-live="polite"></p>
       <div class="plan-chart-grid">
         <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">SECTOR VIEW</p><h3>Funding required by sector</h3></div></div><div id="plan-sector-funding" class="plan-bars"></div></article>
         <article class="plan-chart-card"><div class="panel-heading"><div><p class="section-kicker">COUNTRY VIEW</p><h3>Funding required by country</h3></div></div><div id="plan-country-funding" class="plan-bars"></div></article>
@@ -126,7 +127,7 @@
     <section class="view" id="view-key-messages">
       <div class="view-intro">
         <div><p class="section-kicker">COMMUNICATION RESOURCES</p><h2>El Niño key messages by sector</h2></div>
-        <p>Resources are read live from the Key Messages tab in the reporting Sheet. Use the UNICEF Sector filter to narrow the list.</p>
+        <p>Resources are read live from the Key Messages tab in the reporting Google Sheet. Use the UNICEF Sector filter to narrow the list.</p>
       </div>
       <div id="key-message-status" class="source-status"></div>
       <div id="key-messages-groups" class="key-message-groups" aria-live="polite"></div>
@@ -148,13 +149,13 @@
     </section>
   </main>
 
-  <footer><p><strong>Source:</strong> Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
+  <footer><p><strong>Source:</strong> Google Sheet · <span id="footer-source">connecting</span></p><p>Last refreshed <span id="last-refreshed">—</span> · Figures respond to active filters.</p></footer>
 
   <dialog id="activity-dialog"><div class="dialog-shell"><button class="dialog-close" id="dialog-close" type="button" aria-label="Close activity details">×</button><div id="dialog-content"></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="config.js?v=20261124-28"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="app.js?v=20261124-30"></script>
+  <script src="config.js?v=20261124-29"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js?v=20261125-31"></script>
 </body>
 </html>

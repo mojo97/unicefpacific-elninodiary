@@ -142,7 +142,7 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .plan-filter-bar label > span { display: block; margin: 0 0 5px 3px; color: #6d7f89; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .plan-filter-bar select { width: 100%; height: 42px; padding: 0 10px; color: var(--ink); border: 1px solid #cfdee3; border-radius: 10px; background: #fff; outline: none; }
 .plan-filter-bar select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,141,201,.1); }
-.plan-kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 14px; }
+.plan-kpi-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-bottom: 10px; }
 .plan-kpi { position: relative; overflow: hidden; min-height: 125px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: #fff; box-shadow: var(--shadow); }
 .plan-kpi::after { content: ""; position: absolute; right: -28px; top: -38px; width: 100px; height: 100px; border: 18px solid #edf6f8; border-radius: 50%; }
 .plan-kpi.accent { color: #fff; border-color: #07577a; background: linear-gradient(145deg,#07577a,#008dc9); }
@@ -152,6 +152,16 @@ main { max-width: 1600px; margin: auto; padding: 22px clamp(18px,4vw,58px) 36px;
 .plan-kpi.accent > span,.plan-kpi.accent small { color: #d5eef5; }
 .plan-kpi strong { font: 800 clamp(25px,3vw,34px)/1 Manrope,sans-serif; letter-spacing: -.04em; }
 .plan-kpi small { margin-top: 8px; color: var(--muted); font-size: 11px; }
+.plan-age-card { --age-ink: #006986; --age-line: #b7e4ed; color: var(--age-ink); border-color: var(--age-line); background: #eafafd; }
+.plan-age-adults { --age-ink: #245779; --age-line: #c7dff2; background: #edf6ff; }
+.plan-age-card::after { display: none; }
+.plan-age-card > span { color: var(--age-ink); }
+.plan-age-card > small, .plan-age-split small { font-size: .8125rem; }
+.plan-age-breakdown { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--age-line); }
+.plan-age-breakdown p { margin: 0 0 5px; color: var(--muted); font-size: .8125rem; }
+.plan-age-split { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; font-size: .875rem; }
+.plan-age-split small { display: block; margin-top: 3px; }
+.plan-age-note { margin: 0 0 14px; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 .plan-chart-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-bottom: 22px; }
 .plan-chart-card { min-width: 0; padding: 19px; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
 .plan-chart-card h3 { margin: 3px 0 0; font: 800 18px Manrope,sans-serif; }

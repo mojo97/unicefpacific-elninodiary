@@ -784,20 +784,60 @@ function renderPlanHierarchy(rows) {
   }).join("");
 }
 
+function summarizePlanAge(rows) {
+  const keys = ["girls","boys","women","men"];
+  const totals = { girls: null, boys: null, women: null, men: null, unclassified: 0 };
+  for (const row of rows) {
+    let classified = 0;
+    for (const key of keys) {
+      const count = row[key];
+      if (!Number.isFinite(count) || count < 0) continue;
+      totals[key] = (totals[key] ?? 0) + count;
+      classified += count;
+    }
+    const gap = Number.isFinite(row.peopleTargeted) ? row.peopleTargeted - classified : 0;
+    const unknown = Number.isFinite(row.unknown) ? row.unknown : 0;
+    totals.unclassified += Math.max(0,gap,unknown);
+  }
+  totals.children = totals.girls === null && totals.boys === null ? null : (totals.girls ?? 0) + (totals.boys ?? 0);
+  totals.adults = totals.women === null && totals.men === null ? null : (totals.women ?? 0) + (totals.men ?? 0);
+  totals.classified = (totals.children ?? 0) + (totals.adults ?? 0);
+  return totals;
+}
+
+function planAgePercent(count, denominator) {
+  return count === null || !denominator ? "—" : `${Math.round(100 * count / denominator)}%`;
+}
+
+function renderPlanAgeCard(kind, label, count, total, groups) {
+  const breakdown = groups.map(([name,value]) =>
+    `<div><b>${name} ${planAgePercent(value,count)}</b><small>${value === null ? "Not reported" : fmtNum.format(value)}</small></div>`
+  ).join("");
+  const note = count === null ? "No breakdown reported" : `${fmtNum.format(count)} ${kind} targeted`;
+  return `<article class="plan-kpi plan-age-card plan-age-${kind}"><span>${label}</span><strong>${planAgePercent(count,total)}</strong><small>${note}</small><div class="plan-age-breakdown"><p>Share of ${kind} with sex reported</p><div class="plan-age-split">${breakdown}</div></div></article>`;
+}
+
 function renderSectorPlan() {
   const rows = filteredSectorPlans();
   const totalFunding = rows.reduce((sum,item) => sum + (item.fundingRequired || 0),0);
   const peopleTargeted = rows.reduce((sum,item) => sum + (item.peopleTargeted || 0),0);
   const countries = new Set(rows.map(item => item.country).filter(Boolean));
   const fundedRows = rows.filter(item => item.fundingRequired !== null).length;
+  const age = summarizePlanAge(rows);
   $("sector-plan-status").textContent = `${sectorPlans.length} live plan rows · refreshed ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}`;
   $("plan-record-count").textContent = `${rows.length} of ${sectorPlans.length} records`;
   $("plan-kpis").innerHTML = [
     ["Priority interventions",fmtNum.format(rows.length),`${countries.size} ${countries.size === 1 ? "country" : "countries"}`],
     ["Combined indicator targets",fmtNum.format(peopleTargeted),"Sum of UNICEF targets; people may overlap"],
-    ["Funding required",fundedRows ? fmtUSD.format(totalFunding) : "Not reported",`${fundedRows} records with funding`],
-    ["Funding data coverage",rows.length ? `${Math.round(fundedRows/rows.length*100)}%` : "0%",`${rows.length - fundedRows} records still missing a value`]
-  ].map(([label,value,note],index) => `<article class="plan-kpi ${index === 2 ? "accent" : ""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+    ["Funding required",fundedRows ? fmtUSD.format(totalFunding) : "Not reported",`${fundedRows} records with funding`]
+  ].map(([label,value,note],index) => `<article class="plan-kpi ${index === 2 ? "accent" : ""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("")
+    + renderPlanAgeCard("children","Children targeted · Under 18",age.children,age.classified,[["Girls",age.girls],["Boys",age.boys]])
+    + renderPlanAgeCard("adults","Adults targeted · 18+",age.adults,age.classified,[["Women",age.women],["Men",age.men]]);
+  const ageNote = age.classified
+    ? `Age-group percentages are based on ${fmtNum.format(age.classified)} targets reported as girls, boys, women or men.`
+    : "Age-group percentages are unavailable because no positive age-disaggregated targets are reported for this selection.";
+  $("plan-age-note").textContent = ageNote
+    + (age.unclassified ? ` ${fmtNum.format(age.unclassified)} targets without an age/sex breakdown are excluded.` : "");
   renderPlanBars("plan-sector-funding",rows,"sector");
   renderPlanBars("plan-country-funding",rows,"country");
   renderPlanPivot(rows);

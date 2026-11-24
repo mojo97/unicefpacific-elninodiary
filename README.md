@@ -87,6 +87,10 @@ The workbook has no latitude or longitude columns. The map therefore places acti
 
 The map also includes a dark-blue hazard marker for the Northern Cook Islands, recording Severe Tropical Cyclone Xavier as Category 4 on 19 November 2026 with its source link. This is configured in `config.js` under `hazardEvents`.
 
+## Response Plan: age and sex breakdown
+
+The cards recalculate from the filtered response-plan rows. The children (under 18) and adult (18+) shares use the sum reported as girls, boys, women or men. The within-group shares use girls plus boys, or women plus men, respectively. Blanks are not treated as reported zeroes. Targets without an age/sex breakdown are excluded, and the totals are indicator targets, not unique people. Use non-overlapping age groups in the source sheet: age 18 belongs in the adult group.
+
 ## Optional live viewer count
 
 GitHub Pages cannot calculate concurrent viewers on its own because it is a static host. The header contains a viewer-count widget that stays hidden until `viewerCounterUrl` in `config.js` points to an approved analytics endpoint. The endpoint must allow browser access and return JSON containing `active`, `viewers`, or `count`, for example `{ "active": 12 }`. Use only an organisation-approved service because visitor counting can involve IP-address or device processing.
