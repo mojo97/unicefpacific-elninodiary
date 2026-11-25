@@ -131,7 +131,7 @@ function parseExcelData(source, sourceDetails) {
 }
 
 function parseCsvRows(source, requiredHeaders) {
-  if (!window.XLSX) throw new Error("The Google Sheet reader did not load.");
+  if (!window.XLSX) throw new Error("The Sheet reader did not load.");
   const workbook = XLSX.read(source, { type: "string", cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
@@ -349,7 +349,7 @@ async function refreshData() {
     const sourceLabel = metadata.isDemo ? "Demonstration data" : "Live";
     $("sync-state").querySelector("span").textContent = sourceLabel;
     $("sync-state").title = sourceLabel;
-    $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Google Sheet";
+    $("footer-source").textContent = metadata.isDemo ? "workbook example entries" : "live Sheet";
     populateFilters(); populatePlanFilters(); applyFilters();
     $("last-refreshed").textContent = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
     showToast(`${allActivities.length} activities and ${sectorPlans.length} UNICEF response-plan rows loaded.`);
